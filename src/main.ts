@@ -8,6 +8,7 @@ class ReportBuilder {
   private pageHeight: number;
   private x: number;
   private y: number;
+  private page: number;
 
   constructor() {
     this.doc = new jsPDF({
@@ -20,6 +21,7 @@ class ReportBuilder {
     this.pageHeight = this.doc.internal.pageSize.height;
     this.x = 20;
     this.y = 35;
+    this.page = 2;
   }
 
   public addPage() {
@@ -36,7 +38,7 @@ class ReportBuilder {
     const footerLineWidth: number = 0.3;
     const footerLeftText: string = "Confidential";
     const footerMidleText: string = "Kopra SCM";
-    const footerRightText: string = "Page 2 of 2";
+    const footerRightText: string = `Page 2 of ${this.page}`;
     const footerTextFontSize: number = 8;
     const footerXPadding: number = 2;
 
@@ -113,6 +115,7 @@ class ReportBuilder {
       footerTextPosition
     );
 
+    this.page = this.page + 1;
     // this.doc.rect(this.x, 0, 0, this.pageHeight);
     // this.doc.rect(this.pageWidth - this.x, 0, 0, this.pageHeight);
     // this.doc.rect(0, this.y, this.pageWidth, 0);
@@ -201,17 +204,32 @@ class ReportBuilder {
       this.pageHeight - this.y
     );
 
-    this.doc.rect(this.x, 0, 0, this.pageHeight);
-    this.doc.rect(this.pageWidth - this.x, 0, 0, this.pageHeight);
-    this.doc.rect(0, this.y, this.pageWidth, 0);
-    this.doc.rect(0, this.pageHeight - this.y, this.pageWidth, 0);
+    // this.doc.rect(this.x, 0, 0, this.pageHeight);
+    // this.doc.rect(this.pageWidth - this.x, 0, 0, this.pageHeight);
+    // this.doc.rect(0, this.y, this.pageWidth, 0);
+    // this.doc.rect(0, this.pageHeight - this.y, this.pageWidth, 0);
+  }
+
+  private convertContentToDotted(title: string, page: string): string {
+    const titleWidth = this.doc.getTextWidth(title);
+    const pageNumberWidth = this.doc.getTextWidth(page);
+    const availableWidth =
+      this.pageWidth - titleWidth - pageNumberWidth - this.x * 2;
+    const dotWidth = this.doc.getTextWidth(".");
+    const numberOfDots = Math.floor(availableWidth / dotWidth);
+
+    const dots = ".".repeat(numberOfDots);
+
+    return `${title}${dots}${page}`;
   }
 
   public createTableOfContent() {
     const paddingTop: number = 3;
     const title: string = "Table of Content";
     const titleFontSize: number = 16;
+    let currentPage: number = 2;
 
+    this.addPage();
     // Set Title
     this.doc.setFont("helvetica", "bold");
     this.doc.setFontSize(titleFontSize);
@@ -221,6 +239,632 @@ class ReportBuilder {
       this.pageWidth / 2 - titleWidth / 2,
       this.y + paddingTop + titleFontSize / 2.5
     );
+
+    // Set Content Index
+    const firstIndex: string = "Table of Content";
+    const secondIndex: string = "Document Summary";
+    const contentFontSize: number = 12;
+    const firstPagePaddingTopContent: number =
+      this.y + titleFontSize + paddingTop + 5;
+    const firstPageMaxContent: number = 41;
+    const resPagetMaxContent: number = 47;
+    const dummyData = [
+      {
+        title: "Select Language",
+        description: "Berhasil Memilih Bahasa Indonesia",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Set Company Id",
+        description: "Berhasil Input Company Id",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Set Username",
+        description: "Berhasil Input Username",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Set Password",
+        description: "Berhasil Input Password",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Click Login",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Transaction Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+      {
+        title: "Berhasil Get Invoice Id",
+        description: "Berhasil Click Login",
+        image: "ahsdkjashkdjasd.png",
+        status: "PASSED",
+      },
+    ];
+
+    console.log(dummyData.length);
+    let tempContent: string;
+    this.doc.setFont("times", "normal");
+    this.doc.setFontSize(contentFontSize);
+
+    // Set First Content Index
+    tempContent = this.convertContentToDotted(
+      firstIndex,
+      currentPage.toString()
+    );
+
+    this.doc.text(tempContent, this.x, firstPagePaddingTopContent);
+    this.doc.link(
+      this.x,
+      firstPagePaddingTopContent - 5,
+      this.doc.getTextWidth(tempContent),
+      contentFontSize / 2.5,
+      { pageNumber: currentPage }
+    );
+    // Set Second Content Index
+    currentPage =
+      Math.ceil(dummyData.length / firstPageMaxContent) + currentPage;
+    tempContent = this.convertContentToDotted(
+      secondIndex,
+      currentPage.toString()
+    );
+    this.doc.text(
+      tempContent,
+      this.x,
+      firstPagePaddingTopContent + contentFontSize / 2.5
+    );
+    this.doc.link(
+      this.x,
+      firstPagePaddingTopContent + contentFontSize / 2.5 - 5,
+      this.doc.getTextWidth(tempContent),
+      contentFontSize / 2.5,
+      { pageNumber: 3 }
+    );
+
+    // Set Rest Content
+    currentPage = currentPage + 1;
+    let currentPadding: number = 2;
+    let currentPagePaddingTopContent: number = firstPagePaddingTopContent;
+    let currentPageMaxContent: number = firstPageMaxContent;
+    dummyData.forEach((value, index) => {
+      if (index - 1 === currentPageMaxContent) {
+        currentPageMaxContent = currentPageMaxContent + resPagetMaxContent;
+        this.addPage();
+        currentPadding = 1;
+        currentPagePaddingTopContent = this.y + paddingTop;
+        this.doc.setFont("times", "normal");
+        this.doc.setFontSize(contentFontSize);
+      }
+      tempContent = this.convertContentToDotted(
+        `${index + 1}. ${value.title}`,
+        currentPage.toString()
+      );
+      this.doc.text(
+        tempContent,
+        this.x,
+        currentPagePaddingTopContent + (contentFontSize / 2.5) * currentPadding
+      );
+      currentPadding = currentPadding + 1;
+
+      if (index % 2 != 0) {
+        currentPage = currentPage + 1;
+      }
+    });
   }
 
   public saveReport() {
@@ -238,7 +882,6 @@ reportBuilder.createCover(
   "Dani Yudistira Maulana",
   "SCN_123123"
 );
-reportBuilder.addPage();
 reportBuilder.createTableOfContent();
 
 reportBuilder.saveReport();

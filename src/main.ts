@@ -1,6 +1,28 @@
 import { jsPDF } from "jspdf";
 import fs from "fs";
-import autoTable from "jspdf-autotable";
+import autoTable, { CellHookData } from "jspdf-autotable";
+import moment from "moment";
+
+type Report = {
+  project: {
+    name: string;
+  };
+  test_case: {
+    name: string;
+  };
+  tool: {
+    name: string;
+  };
+  author: string;
+  report_purpose: string;
+};
+
+type StepData = {
+  title: string;
+  status: {
+    name: string;
+  };
+};
 
 class ReportBuilder {
   private doc: jsPDF;
@@ -24,22 +46,30 @@ class ReportBuilder {
     this.page = 2;
   }
 
-  public addPage() {
+  private addPage(
+    title: string,
+    projectName: string,
+    author: string,
+    tool: string,
+    testCaseId: string,
+    date: string,
+    totalPage: number
+  ) {
+    moment.locale("id");
     const rows: string[][] = [
-      ["Title", "Test Automation For Kopra SCM"],
-      ["Author", "Automation Team"],
-      ["Tools", "Selenium"],
-      ["Test Case Id", "SCN_001"],
-      ["Date", "31 July 2024"],
+      ["Title", title],
+      ["Author", author],
+      ["Tools", tool],
+      ["Test Case Id", testCaseId],
+      ["Date", date],
     ];
     const headerPosition: number = 10;
     const headerTableFontSize: number = 10;
     const footerPosition: number = 10;
     const footerLineWidth: number = 0.3;
     const footerLeftText: string = "Confidential";
-    const footerMidleText: string = "Kopra SCM";
-    const footerRightText: string = `Page 2 of ${this.page}`;
-    const footerTextFontSize: number = 8;
+    const footerRightText: string = `Page ${this.page} of ${totalPage}`;
+    const footerTextFontSize: number = 10;
     const footerXPadding: number = 2;
 
     this.doc.addPage();
@@ -99,10 +129,9 @@ class ReportBuilder {
     this.doc.text(footerLeftText, this.x + footerXPadding, footerTextPosition);
 
     // Footer Middle Text
-    const footerMiddleTextWidth: number =
-      this.doc.getTextWidth(footerMidleText);
+    const footerMiddleTextWidth: number = this.doc.getTextWidth(projectName);
     this.doc.text(
-      footerMidleText,
+      projectName,
       this.pageWidth / 2 - footerMiddleTextWidth / 2,
       footerTextPosition
     );
@@ -122,7 +151,7 @@ class ReportBuilder {
     // this.doc.rect(0, this.pageHeight - this.y, this.pageWidth, 0);
   }
 
-  public createCover(
+  private createCover(
     title: string,
     subTitle: string,
     author: string,
@@ -137,7 +166,6 @@ class ReportBuilder {
     const testCaseIdFontSize: number = 12;
     const imageWidth: number = 35;
     const imageHeight: number = 10;
-
     const image: string = `data:image/png;base64,${fs
       .readFileSync("./LogoMandiri.png")
       .toString("base64")}`;
@@ -210,26 +238,26 @@ class ReportBuilder {
     // this.doc.rect(0, this.pageHeight - this.y, this.pageWidth, 0);
   }
 
-  private convertContentToDotted(title: string, page: string): string {
-    const titleWidth = this.doc.getTextWidth(title);
-    const pageNumberWidth = this.doc.getTextWidth(page);
-    const availableWidth =
-      this.pageWidth - titleWidth - pageNumberWidth - this.x * 2;
-    const dotWidth = this.doc.getTextWidth(".");
-    const numberOfDots = Math.floor(availableWidth / dotWidth);
-
-    const dots = ".".repeat(numberOfDots);
-
-    return `${title}${dots}${page}`;
-  }
-
-  public createTableOfContent() {
+  private createTableOfContent(
+    stepData: {}[],
+    startPage: number,
+    startReportPage: number,
+    firstMaxPage: number,
+    restMaxPage: number
+  ) {
+    let currentPage: number = startPage;
     const paddingTop: number = 3;
     const title: string = "Table of Content";
     const titleFontSize: number = 16;
-    let currentPage: number = 2;
+    const firstContent: string = "Table of Content";
+    const secondContent: string = "Document Summary";
+    const contentFontSize: number = 12;
+    const contentPadding: number = 5;
+    const firstPagePaddingTopContent: number =
+      this.y + titleFontSize + paddingTop + contentPadding;
+    let tempContent: string;
 
-    this.addPage();
+    this.doc.setPage(currentPage);
     // Set Title
     this.doc.setFont("helvetica", "bold");
     this.doc.setFontSize(titleFontSize);
@@ -240,648 +268,394 @@ class ReportBuilder {
       this.y + paddingTop + titleFontSize / 2.5
     );
 
-    // Set Content Index
-    const firstIndex: string = "Table of Content";
-    const secondIndex: string = "Document Summary";
-    const contentFontSize: number = 12;
-    const firstPagePaddingTopContent: number =
-      this.y + titleFontSize + paddingTop + 5;
-    const firstPageMaxContent: number = 41;
-    const resPagetMaxContent: number = 47;
-    const dummyData = [
-      {
-        title: "Select Language",
-        description: "Berhasil Memilih Bahasa Indonesia",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Set Company Id",
-        description: "Berhasil Input Company Id",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Set Username",
-        description: "Berhasil Input Username",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Set Password",
-        description: "Berhasil Input Password",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Click Login",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Transaction Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-      {
-        title: "Berhasil Get Invoice Id",
-        description: "Berhasil Click Login",
-        image: "ahsdkjashkdjasd.png",
-        status: "PASSED",
-      },
-    ];
+    const convertContentToDotted = (title: string, page: string) => {
+      const titleWidth = this.doc.getTextWidth(title);
+      const pageNumberWidth = this.doc.getTextWidth(page);
+      const availableWidth =
+        this.pageWidth - titleWidth - pageNumberWidth - this.x * 2;
+      const dotWidth = this.doc.getTextWidth(".");
+      const numberOfDots = Math.floor(availableWidth / dotWidth);
 
-    console.log(dummyData.length);
-    let tempContent: string;
+      const dots = ".".repeat(numberOfDots);
+
+      return `${title}${dots}${page}`;
+    };
+
+    // Set Content Font
     this.doc.setFont("times", "normal");
     this.doc.setFontSize(contentFontSize);
 
-    // Set First Content Index
-    tempContent = this.convertContentToDotted(
-      firstIndex,
-      currentPage.toString()
-    );
+    // Set First Content
+    tempContent = convertContentToDotted(firstContent, currentPage.toString());
 
-    this.doc.text(tempContent, this.x, firstPagePaddingTopContent);
-    this.doc.link(
-      this.x,
-      firstPagePaddingTopContent - 5,
-      this.doc.getTextWidth(tempContent),
-      contentFontSize / 2.5,
-      { pageNumber: currentPage }
-    );
-    // Set Second Content Index
-    currentPage =
-      Math.ceil(dummyData.length / firstPageMaxContent) + currentPage;
-    tempContent = this.convertContentToDotted(
-      secondIndex,
-      currentPage.toString()
-    );
-    this.doc.text(
+    this.doc.textWithLink(tempContent, this.x, firstPagePaddingTopContent, {
+      pageNumber: currentPage,
+    });
+
+    // Set Second Content
+    currentPage = Math.ceil(stepData.length / firstMaxPage) + currentPage;
+    tempContent = convertContentToDotted(secondContent, currentPage.toString());
+    this.doc.textWithLink(
       tempContent,
       this.x,
-      firstPagePaddingTopContent + contentFontSize / 2.5
-    );
-    this.doc.link(
-      this.x,
-      firstPagePaddingTopContent + contentFontSize / 2.5 - 5,
-      this.doc.getTextWidth(tempContent),
-      contentFontSize / 2.5,
-      { pageNumber: 3 }
+      firstPagePaddingTopContent + contentFontSize / 2.5,
+      { pageNumber: currentPage }
     );
 
     // Set Rest Content
-    currentPage = currentPage + 1;
+    currentPage = startPage + 1;
+    let restCurrentPage = startReportPage;
     let currentPadding: number = 2;
     let currentPagePaddingTopContent: number = firstPagePaddingTopContent;
-    let currentPageMaxContent: number = firstPageMaxContent;
-    dummyData.forEach((value, index) => {
-      if (index - 1 === currentPageMaxContent) {
-        currentPageMaxContent = currentPageMaxContent + resPagetMaxContent;
-        this.addPage();
+    let currentPageMaxContent: number = firstMaxPage;
+    stepData.forEach((value: any, index: any) => {
+      if (index === currentPageMaxContent) {
+        currentPageMaxContent = currentPageMaxContent + restMaxPage;
+        this.doc.setPage(currentPage);
         currentPadding = 1;
         currentPagePaddingTopContent = this.y + paddingTop;
         this.doc.setFont("times", "normal");
         this.doc.setFontSize(contentFontSize);
+        currentPage = currentPage + 1;
       }
-      tempContent = this.convertContentToDotted(
+      tempContent = convertContentToDotted(
         `${index + 1}. ${value.title}`,
-        currentPage.toString()
+        restCurrentPage.toString()
       );
-      this.doc.text(
+      this.doc.textWithLink(
         tempContent,
         this.x,
-        currentPagePaddingTopContent + (contentFontSize / 2.5) * currentPadding
+        currentPagePaddingTopContent + (contentFontSize / 2.5) * currentPadding,
+        { pageNumber: restCurrentPage }
       );
       currentPadding = currentPadding + 1;
 
       if (index % 2 != 0) {
-        currentPage = currentPage + 1;
+        restCurrentPage = restCurrentPage + 1;
       }
     });
   }
 
-  public saveReport() {
-    console.log(this.doc.getFontList());
+  private createDocumentSummary(
+    stepData: {}[],
+    startPage: number,
+    startReportPage: number,
+    firstMaxPage: number,
+    restMaxPage: number,
+    totalPassed: number,
+    totalFailed: number
+  ) {
+    let currentPage: number = startPage;
+    const paddingTop: number = 3;
+    const title: string = "Document Summary";
+    const titleFontSize: number = 16;
+    const summaryFontSize: number = 11;
+    let currentStepIncremental = 1;
+    let body: {}[][] = [];
+    let rows: string[][] = [
+      ["Total Passed", "Total Failed", "Total"],
+      [
+        totalPassed.toString(),
+        totalFailed.toString(),
+        (totalPassed + totalFailed).toString(),
+      ],
+    ];
+
+    if (stepData.length <= firstMaxPage) {
+      body.push(stepData.slice(0, stepData.length));
+    }
+
+    if (stepData.length > firstMaxPage) {
+      body.push(stepData.slice(0, firstMaxPage));
+      let stepDataLeft: number = stepData.length - firstMaxPage;
+      let startIndex: number = firstMaxPage;
+      for (
+        let i = 1;
+        i <= Math.ceil((stepData.length - firstMaxPage) / restMaxPage);
+        i++
+      ) {
+        if (stepDataLeft > restMaxPage) {
+          body.push(stepData.slice(startIndex, startIndex + restMaxPage));
+          stepDataLeft = stepDataLeft - restMaxPage;
+          startIndex = startIndex + restMaxPage;
+        } else {
+          body.push(stepData.slice(startIndex, stepData.length));
+        }
+      }
+    }
+
+    this.doc.setPage(currentPage);
+    // Set Title
+    this.doc.setFont("helvetica", "bold");
+    this.doc.setFontSize(titleFontSize);
+    const titleWidth = this.doc.getTextWidth(title);
+    this.doc.text(
+      title,
+      this.pageWidth / 2 - titleWidth / 2,
+      this.y + paddingTop + titleFontSize / 2.5
+    );
+
+    // Set Summary Total
+    autoTable(this.doc, {
+      head: [],
+      body: rows,
+      startY: this.y + titleFontSize + paddingTop,
+      theme: "grid",
+      styles: {
+        fontSize: summaryFontSize,
+        font: "times",
+        fontStyle: "bold",
+        cellPadding: {
+          bottom: 0.5,
+          top: 0.5,
+        },
+        lineColor: "black",
+        textColor: "black",
+        halign: "center",
+        valign: "middle",
+      },
+      columnStyles: {
+        0: { cellWidth: (this.pageWidth - this.x * 2) / 3 },
+        1: { cellWidth: (this.pageWidth - this.x * 2) / 3 },
+        2: { cellWidth: (this.pageWidth - this.x * 2) / 3 },
+      },
+      margin: {
+        left: this.x,
+        right: this.x,
+      },
+      didParseCell: (data) => {
+        if (data.row.index === 0) {
+          data.cell.styles.fillColor = "gray";
+          data.cell.styles.textColor = "white";
+        }
+        if (data.row.index === 1 && data.column.index === 0) {
+          data.cell.styles.textColor = "green";
+        }
+        if (data.row.index === 1 && data.column.index === 1) {
+          data.cell.styles.textColor = [247, 59, 59];
+        }
+      },
+    });
+
+    const statusColumnStyling = (data: CellHookData) => {
+      data.cell.styles.fontStyle = "bold";
+      data.cell.styles.halign = "center";
+      data.cell.styles.cellPadding = { left: 0, bottom: 0.5, top: 0.5 };
+      if (data.cell.text[0] === "PASSED") {
+        data.cell.styles.textColor = "green";
+      } else {
+        data.cell.styles.textColor = [247, 59, 59];
+      }
+    };
+
+    const stepColumnIncrement = (data: CellHookData) => {
+      data.cell.text[0] = `${currentStepIncremental++}. ${data.cell.text[0]}`;
+    };
+
+    const statusColumnTextFormat = (data: CellHookData) => {
+      data.cell.text[0] =
+        data.cell.text[0].charAt(0).toUpperCase() +
+        data.cell.text[0].slice(1).toLowerCase();
+    };
+
+    let currentStartPage: number = startReportPage;
+    let restStartIndex: number = 0;
+
+    for (let i = 0; i < body.length; i++) {
+      this.doc.setPage(currentPage);
+      autoTable(this.doc, {
+        head: [],
+        body: body[i],
+        startY: i === 0 ? false : this.y + paddingTop,
+        theme: "grid",
+        styles: {
+          fontSize: summaryFontSize,
+          font: "times",
+          fontStyle: "normal",
+          textColor: "black",
+          lineColor: "black",
+          cellPadding: {
+            bottom: 0.5,
+            top: 0.5,
+            left: 2,
+          },
+        },
+        columnStyles: {
+          1: { cellWidth: 20 },
+        },
+        margin: {
+          left: this.x,
+          right: this.x,
+        },
+        didParseCell: (data) => {
+          if (data.row.index === 0 && i === 0) {
+            data.cell.styles.fillColor = "gray";
+            data.cell.styles.textColor = "white";
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.halign = "center";
+            data.cell.styles.cellPadding = { left: 0, bottom: 0.5, top: 0.5 };
+          }
+          if (data.row.index > 0 && data.column.index === 1 && i === 0) {
+            statusColumnStyling(data);
+          }
+          if (data.column.index === 1 && i > 0) {
+            statusColumnStyling(data);
+          }
+          if (data.column.index === 0 && i > 0) {
+            stepColumnIncrement(data);
+          }
+          if (data.column.index === 0 && data.row.index > 0 && i === 0) {
+            stepColumnIncrement(data);
+          }
+          if (data.column.index === 1 && i > 0) {
+            statusColumnTextFormat(data);
+          }
+          if (data.column.index === 1 && data.row.index > 0 && i === 0) {
+            statusColumnTextFormat(data);
+          }
+        },
+        didDrawCell: (data) => {
+          if (data.row.index > 0 && data.column.index === 0 && i === 0) {
+            this.doc.link(
+              data.cell.x,
+              data.cell.y,
+              data.cell.width,
+              data.cell.height,
+              { pageNumber: currentStartPage }
+            );
+
+            if ((data.row.index - 1) % 2 != 0) {
+              currentStartPage = currentStartPage + 1;
+            }
+            restStartIndex = data.row.index;
+          }
+          if (data.column.index === 0 && i > 0) {
+            data.row.index;
+            this.doc.link(
+              data.cell.x,
+              data.cell.y,
+              data.cell.width,
+              data.cell.height,
+              { pageNumber: currentStartPage }
+            );
+            if ((data.row.index + 1) % 2 != 0) {
+              currentStartPage = currentStartPage + 1;
+            }
+            restStartIndex++;
+          }
+        },
+      });
+      currentPage++;
+    }
+  }
+
+  public createReport(report: Report, stepData: StepData[]) {
+    const projectName: string = report.project.name;
+    const title: string = `Test Automation for ${report.project.name}`;
+    const subTitle: string = report.report_purpose;
+    const author: string = report.author;
+    const testCase: string = report.test_case.name;
+    const tool: string = report.tool.name;
+    const date: number = Date.now();
+    const dateString: string = moment(date).format("DD-MMMM-YYY_HH:mm:ss");
+    const stepDataLength: number = stepData.length;
+    const tableOfContentStartPage: number = 2;
+    const tableOfContentFirstMaxPage: number = 41;
+    const tableOfContentRestMaxPage: number = 46;
+    const tableOfContentTotalPage: number =
+      Math.ceil(
+        (stepDataLength - tableOfContentFirstMaxPage) /
+          tableOfContentRestMaxPage
+      ) + 1;
+    const documentSummaryHeader: {} = { title: "Step Name", status: "Status" };
+    const documentSummaryStartPage: number = tableOfContentTotalPage + 2;
+    const documentSummaryFirstMaxPage: number = 34;
+    const documentSummaryRestMaxPage: number = 40;
+    const documentSummaryTotalPage: number =
+      Math.ceil(
+        (stepDataLength - documentSummaryFirstMaxPage) /
+          documentSummaryRestMaxPage
+      ) + 1;
+    const startPageReport: number =
+      documentSummaryTotalPage + tableOfContentTotalPage + 2;
+    const totalAllPage: number =
+      Math.ceil(stepDataLength / 2) +
+      tableOfContentTotalPage +
+      documentSummaryTotalPage;
+    let newStepData: {}[] = [];
+
+    stepData.forEach((value) => {
+      newStepData.push({
+        title: value.title,
+        status: value.status.name,
+      });
+    });
+
+    this.createCover(title, subTitle, author, testCase);
+
+    for (let i = 0; i < totalAllPage; i++) {
+      this.addPage(
+        title,
+        projectName,
+        author,
+        tool,
+        testCase,
+        dateString,
+        totalAllPage + 1
+      );
+    }
+
+    this.createTableOfContent(
+      newStepData,
+      tableOfContentStartPage,
+      startPageReport,
+      tableOfContentFirstMaxPage,
+      tableOfContentRestMaxPage
+    );
+
+    newStepData.unshift(documentSummaryHeader);
+
+    this.createDocumentSummary(
+      newStepData,
+      documentSummaryStartPage,
+      startPageReport,
+      documentSummaryFirstMaxPage,
+      documentSummaryRestMaxPage,
+      20,
+      20
+    );
 
     this.doc.save("report.pdf");
   }
 }
 
+let dummyData: StepData[] = [];
+
+for (let i = 1; i <= 100; i++) {
+  dummyData.push({
+    title: `Select Language ${i}`,
+    status: {
+      name: i % 2 === 0 ? "FAILED" : "PASSED",
+    },
+  });
+}
+
+console.log(`Actual Data ${dummyData.length}`);
+
+const report = {
+  project: {
+    name: "TPS",
+  },
+  test_case: {
+    name: "KP-9001",
+  },
+  tool: {
+    name: "Selenium",
+  },
+  author: "AUTOMATION TEAM",
+  report_purpose: "Regression Cycle 2 Test Report",
+};
+
 const reportBuilder = new ReportBuilder();
 
-reportBuilder.createCover(
-  "Test Automation For Kopra SCM",
-  "Regression Cycle 2 Test Report",
-  "Dani Yudistira Maulana",
-  "SCN_123123"
-);
-reportBuilder.createTableOfContent();
-
-reportBuilder.saveReport();
+reportBuilder.createReport(report, dummyData);

@@ -19,6 +19,8 @@ type Report = {
 
 type StepData = {
   title: string;
+  description: string;
+  image: string;
   status: {
     name: string;
   };
@@ -46,7 +48,7 @@ class ReportBuilder {
     this.page = 2;
   }
 
-  private addPage(
+  private async addPage(
     title: string,
     projectName: string,
     author: string,
@@ -151,7 +153,19 @@ class ReportBuilder {
     // this.doc.rect(0, this.pageHeight - this.y, this.pageWidth, 0);
   }
 
-  private createCover(
+  private async getImageBinary(path: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      fs.readFile(path, (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
+      });
+    });
+  }
+
+  private async createCover(
     title: string,
     subTitle: string,
     author: string,
@@ -166,9 +180,10 @@ class ReportBuilder {
     const testCaseIdFontSize: number = 12;
     const imageWidth: number = 35;
     const imageHeight: number = 10;
-    const image: string = `data:image/png;base64,${fs
-      .readFileSync("./LogoMandiri.png")
-      .toString("base64")}`;
+    const imageBuffer: Buffer = await this.getImageBinary("./LogoMandiri.png");
+    const image: string = `data:image/png;base64,${imageBuffer.toString(
+      "base64"
+    )}`;
 
     // Set Image
     this.doc.addImage(
@@ -238,7 +253,7 @@ class ReportBuilder {
     // this.doc.rect(0, this.pageHeight - this.y, this.pageWidth, 0);
   }
 
-  private createTableOfContent(
+  private async createTableOfContent(
     stepData: {}[],
     startPage: number,
     startReportPage: number,
@@ -336,14 +351,15 @@ class ReportBuilder {
     });
   }
 
-  private createDocumentSummary(
+  private async createDocumentSummary(
     stepData: {}[],
     startPage: number,
     startReportPage: number,
     firstMaxPage: number,
     restMaxPage: number,
     totalPassed: number,
-    totalFailed: number
+    totalFailed: number,
+    totalDone: number
   ) {
     let currentPage: number = startPage;
     const paddingTop: number = 3;
@@ -353,11 +369,12 @@ class ReportBuilder {
     let currentStepIncremental = 1;
     let body: {}[][] = [];
     let rows: string[][] = [
-      ["Total Passed", "Total Failed", "Total"],
+      ["Total Passed", "Total Failed", "Total Done", "Total"],
       [
         totalPassed.toString(),
         totalFailed.toString(),
-        (totalPassed + totalFailed).toString(),
+        totalDone.toString(),
+        (totalPassed + totalFailed + totalDone).toString(),
       ],
     ];
 
@@ -415,9 +432,10 @@ class ReportBuilder {
         valign: "middle",
       },
       columnStyles: {
-        0: { cellWidth: (this.pageWidth - this.x * 2) / 3 },
-        1: { cellWidth: (this.pageWidth - this.x * 2) / 3 },
-        2: { cellWidth: (this.pageWidth - this.x * 2) / 3 },
+        0: { cellWidth: (this.pageWidth - this.x * 2) / 4 },
+        1: { cellWidth: (this.pageWidth - this.x * 2) / 4 },
+        2: { cellWidth: (this.pageWidth - this.x * 2) / 4 },
+        3: { cellWidth: (this.pageWidth - this.x * 2) / 4 },
       },
       margin: {
         left: this.x,
@@ -443,7 +461,7 @@ class ReportBuilder {
       data.cell.styles.cellPadding = { left: 0, bottom: 0.5, top: 0.5 };
       if (data.cell.text[0] === "PASSED") {
         data.cell.styles.textColor = "green";
-      } else {
+      } else if (data.cell.text[0] === "FAILED") {
         data.cell.styles.textColor = [247, 59, 59];
       }
     };
@@ -549,7 +567,146 @@ class ReportBuilder {
     }
   }
 
-  public createReport(report: Report, stepData: StepData[]) {
+  private async createContent(stepData: StepData[], startPage: number) {
+    const fontSize: number = 12;
+    const titlePadding: number = 2;
+    const descriptionPadding: number = 5;
+    const imageWidth = this.pageWidth - this.x * 2;
+    const imageHeight = imageWidth / 2;
+    const imagePadding: number = 3;
+
+    let currentTitlePosition: number;
+    let currentImagePosition: number;
+    let currentDescriptionPosition: number = 0;
+    let descriptionHeight: number = 0;
+    let currentStartPage: number = startPage;
+    let imageBuffer: Buffer;
+    let image: string;
+    let index: number = 0;
+
+    this.doc.setFontSize(fontSize);
+
+    const getDescriptionTotalHeight = (description: string): number => {
+      if (description.includes("\n")) {
+        const splitDescription = description.split("\n");
+
+        const textHeight = this.doc.getTextDimensions(splitDescription[0], {
+          maxWidth: this.pageWidth - this.x * 2,
+        }).h;
+
+        const totalHeight: number = textHeight * splitDescription.length;
+
+        return totalHeight;
+      } else {
+        const textHeight = this.doc.getTextDimensions(description, {
+          maxWidth: this.pageWidth - this.x * 2,
+        }).h;
+        const totalLines = this.doc.splitTextToSize(
+          description,
+          this.pageWidth - this.x * 2
+        ).length as number;
+
+        const totalHeight: number = textHeight * totalLines;
+
+        return totalHeight;
+      }
+    };
+
+    for (const value of stepData) {
+      // Set Title
+      this.doc.setFont("Times", "bold");
+      if (value.status.name === "FAILED") {
+        this.doc.setTextColor(247, 59, 59);
+      } else {
+        this.doc.setTextColor(value.status.name === "DONE" ? "black" : "green");
+      }
+
+      if (index % 2 === 0) {
+        this.doc.setPage(currentStartPage);
+        console.log(`Index = ${index}, CurrentStartPage = ${currentStartPage}`);
+        currentTitlePosition = this.y + titlePadding * 2;
+        currentStartPage++;
+      } else {
+        currentTitlePosition = currentDescriptionPosition;
+      }
+
+      this.doc.text(
+        `${index + 1}. ${value.title}`,
+        this.x,
+        currentTitlePosition
+      );
+
+      // Set Image
+      imageBuffer = await this.getImageBinary(`./${value.image}`);
+      image = `data:image/png;base64,${imageBuffer.toString("base64")}`;
+
+      currentImagePosition = currentTitlePosition + imagePadding;
+      this.doc.addImage(
+        image,
+        "PNG",
+        this.x,
+        currentImagePosition,
+        imageWidth,
+        imageHeight
+      );
+      this.doc.addImage(
+        image,
+        "PNG",
+        this.x,
+        currentImagePosition,
+        imageWidth,
+        imageHeight
+      );
+
+      // Set Description
+      this.doc.setFont("Times", "normal");
+      this.doc.setTextColor("black");
+
+      currentDescriptionPosition =
+        currentImagePosition + imageHeight + descriptionPadding;
+      this.doc.text(value.description, this.x, currentDescriptionPosition);
+      descriptionHeight = getDescriptionTotalHeight(value.description);
+
+      index++;
+    }
+
+    // // Set Title
+    // this.doc.setFont("Times", "bold");
+    // this.doc.setTextColor(247, 59, 59);
+
+    // currentTitlePosition =
+    //   currentDescriptionPosition + descriptionHeight + titlePadding;
+    // this.doc.text(title, this.x, currentTitlePosition);
+
+    // // Set Image
+    // currentImagePosition = currentTitlePosition + imagePadding;
+    // this.doc.addImage(
+    //   image,
+    //   "PNG",
+    //   this.x,
+    //   currentImagePosition,
+    //   imageWidth,
+    //   imageHeight
+    // );
+    // this.doc.addImage(
+    //   image,
+    //   "PNG",
+    //   this.x,
+    //   currentImagePosition,
+    //   imageWidth,
+    //   imageHeight
+    // );
+
+    // // Set Description
+    // this.doc.setFont("Times", "normal");
+    // this.doc.setTextColor("black");
+
+    // currentDescriptionPosition =
+    //   currentImagePosition + imageHeight + descriptionPadding;
+    // this.doc.text(description, this.x, currentDescriptionPosition);
+  }
+
+  public async createReport(report: Report, stepData: StepData[]) {
     const projectName: string = report.project.name;
     const title: string = `Test Automation for ${report.project.name}`;
     const subTitle: string = report.report_purpose;
@@ -557,7 +714,7 @@ class ReportBuilder {
     const testCase: string = report.test_case.name;
     const tool: string = report.tool.name;
     const date: number = Date.now();
-    const dateString: string = moment(date).format("DD-MMMM-YYY_HH:mm:ss");
+    const dateString: string = moment(date).format("DD-MMMM-YYYY_HH:mm:ss");
     const stepDataLength: number = stepData.length;
     const tableOfContentStartPage: number = 2;
     const tableOfContentFirstMaxPage: number = 41;
@@ -591,7 +748,7 @@ class ReportBuilder {
       });
     });
 
-    this.createCover(title, subTitle, author, testCase);
+    await this.createCover(title, subTitle, author, testCase);
 
     for (let i = 0; i < totalAllPage; i++) {
       this.addPage(
@@ -605,7 +762,7 @@ class ReportBuilder {
       );
     }
 
-    this.createTableOfContent(
+    await this.createTableOfContent(
       newStepData,
       tableOfContentStartPage,
       startPageReport,
@@ -615,15 +772,18 @@ class ReportBuilder {
 
     newStepData.unshift(documentSummaryHeader);
 
-    this.createDocumentSummary(
+    await this.createDocumentSummary(
       newStepData,
       documentSummaryStartPage,
       startPageReport,
       documentSummaryFirstMaxPage,
       documentSummaryRestMaxPage,
       20,
+      20,
       20
     );
+
+    await this.createContent(stepData, startPageReport);
 
     this.doc.save("report.pdf");
   }
@@ -633,9 +793,13 @@ let dummyData: StepData[] = [];
 
 for (let i = 1; i <= 100; i++) {
   dummyData.push({
-    title: `Select Language ${i}`,
+    title: `Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Mendapa`,
+    description:
+      "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
+    // "Expected : Memastikan Berhasil Click Submit\nActual : Berhasil Click Submit\nSelect Language En\nActual: Memastikan BErhasil Login\nSelect Language",
+    image: "ss.png",
     status: {
-      name: i % 2 === 0 ? "FAILED" : "PASSED",
+      name: i < 30 ? "DONE" : i < 70 ? "PASSED" : "FAILED",
     },
   });
 }
@@ -656,6 +820,13 @@ const report = {
   report_purpose: "Regression Cycle 2 Test Report",
 };
 
-const reportBuilder = new ReportBuilder();
+(async () => {
+  const reportBuilder = new ReportBuilder();
 
-reportBuilder.createReport(report, dummyData);
+  console.log(
+    "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann"
+      .length
+  );
+
+  await reportBuilder.createReport(report, dummyData);
+})();

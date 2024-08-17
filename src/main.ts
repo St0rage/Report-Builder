@@ -57,7 +57,6 @@ class ReportBuilder {
     date: string,
     totalPage: number
   ) {
-    moment.locale("id");
     const rows: string[][] = [
       ["Title", title],
       ["Author", author],
@@ -569,7 +568,7 @@ class ReportBuilder {
 
   private async createContent(stepData: StepData[], startPage: number) {
     const fontSize: number = 12;
-    const titlePadding: number = 2;
+    const titlePadding: number = 1.5;
     const descriptionPadding: number = 5;
     const imageWidth = this.pageWidth - this.x * 2;
     const imageHeight = imageWidth / 2;
@@ -578,6 +577,7 @@ class ReportBuilder {
     let currentTitlePosition: number;
     let currentImagePosition: number;
     let currentDescriptionPosition: number = 0;
+    let newDescription: string;
     let descriptionHeight: number = 0;
     let currentStartPage: number = startPage;
     let imageBuffer: Buffer;
@@ -586,29 +586,50 @@ class ReportBuilder {
 
     this.doc.setFontSize(fontSize);
 
-    const getDescriptionTotalHeight = (description: string): number => {
+    const getDescriptionTotalHeight = (
+      description: string
+    ): [string, number] => {
+      const textHeight = fontSize / 2.5;
+
       if (description.includes("\n")) {
+        let formatDescription: string = "";
         const splitDescription = description.split("\n");
+        let lines: string[] = [];
 
-        const textHeight = this.doc.getTextDimensions(splitDescription[0], {
-          maxWidth: this.pageWidth - this.x * 2,
-        }).h;
+        splitDescription.forEach((value) => {
+          let tempLines = this.doc.splitTextToSize(
+            value,
+            this.pageWidth - this.x * 2
+          ) as string[];
 
+          tempLines.forEach((tempValue) => {
+            lines.push(tempValue);
+          });
+        });
+
+        const totalLines: number = lines.length > 5 ? 5 : lines.length;
         const totalHeight: number = textHeight * splitDescription.length;
 
-        return totalHeight;
+        for (let i = 0; i < totalLines; i++) {
+          formatDescription += `${lines[i]}${i === totalLines ? "" : "\n"}`;
+        }
+
+        return [formatDescription, totalHeight];
       } else {
-        const textHeight = this.doc.getTextDimensions(description, {
-          maxWidth: this.pageWidth - this.x * 2,
-        }).h;
-        const totalLines = this.doc.splitTextToSize(
+        let formatDescription: string = "";
+        const lines = this.doc.splitTextToSize(
           description,
           this.pageWidth - this.x * 2
-        ).length as number;
+        ) as string[];
 
+        const totalLines: number = lines.length > 5 ? 5 : lines.length;
         const totalHeight: number = textHeight * totalLines;
 
-        return totalHeight;
+        for (let i = 0; i < totalLines; i++) {
+          formatDescription += `${lines[i]}${i === totalLines ? "" : "\n"}`;
+        }
+
+        return [formatDescription, totalHeight];
       }
     };
 
@@ -623,11 +644,11 @@ class ReportBuilder {
 
       if (index % 2 === 0) {
         this.doc.setPage(currentStartPage);
-        console.log(`Index = ${index}, CurrentStartPage = ${currentStartPage}`);
         currentTitlePosition = this.y + titlePadding * 2;
         currentStartPage++;
       } else {
-        currentTitlePosition = currentDescriptionPosition;
+        currentTitlePosition =
+          currentDescriptionPosition + descriptionHeight + titlePadding;
       }
 
       this.doc.text(
@@ -664,49 +685,17 @@ class ReportBuilder {
 
       currentDescriptionPosition =
         currentImagePosition + imageHeight + descriptionPadding;
-      this.doc.text(value.description, this.x, currentDescriptionPosition);
-      descriptionHeight = getDescriptionTotalHeight(value.description);
+      [newDescription, descriptionHeight] = getDescriptionTotalHeight(
+        value.description
+      );
+      this.doc.text(newDescription, this.x, currentDescriptionPosition);
 
       index++;
     }
-
-    // // Set Title
-    // this.doc.setFont("Times", "bold");
-    // this.doc.setTextColor(247, 59, 59);
-
-    // currentTitlePosition =
-    //   currentDescriptionPosition + descriptionHeight + titlePadding;
-    // this.doc.text(title, this.x, currentTitlePosition);
-
-    // // Set Image
-    // currentImagePosition = currentTitlePosition + imagePadding;
-    // this.doc.addImage(
-    //   image,
-    //   "PNG",
-    //   this.x,
-    //   currentImagePosition,
-    //   imageWidth,
-    //   imageHeight
-    // );
-    // this.doc.addImage(
-    //   image,
-    //   "PNG",
-    //   this.x,
-    //   currentImagePosition,
-    //   imageWidth,
-    //   imageHeight
-    // );
-
-    // // Set Description
-    // this.doc.setFont("Times", "normal");
-    // this.doc.setTextColor("black");
-
-    // currentDescriptionPosition =
-    //   currentImagePosition + imageHeight + descriptionPadding;
-    // this.doc.text(description, this.x, currentDescriptionPosition);
   }
 
   public async createReport(report: Report, stepData: StepData[]) {
+    moment.locale("id");
     const projectName: string = report.project.name;
     const title: string = `Test Automation for ${report.project.name}`;
     const subTitle: string = report.report_purpose;
@@ -785,26 +774,38 @@ class ReportBuilder {
 
     await this.createContent(stepData, startPageReport);
 
-    this.doc.save("report.pdf");
+    // this.doc.save("report.pdf");
+
+    const path = "D:/uploads/reports";
+
+    const output = this.doc.output("arraybuffer");
+
+    fs.writeFile(path + "/report.pdf", Buffer.from(output), (err) => {
+      if (err) {
+        throw err;
+      }
+    });
   }
 }
 
 let dummyData: StepData[] = [];
 
-for (let i = 1; i <= 100; i++) {
+for (let i = 1; i <= 10; i++) {
   dummyData.push({
-    title: `Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Mendapa`,
-    description:
-      "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
+    title: `Click Submit ${i}`,
+    description: `Expected : Memastikan Berhasil Click Submit ${i}\nActual : Berhasil Click Submit ${i}\nTransaction Id : 09827372716232`,
+    // "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannMEndapatkan\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
     // "Expected : Memastikan Berhasil Click Submit\nActual : Berhasil Click Submit\nSelect Language En\nActual: Memastikan BErhasil Login\nSelect Language",
-    image: "ss.png",
+    // "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
+    // "Loremipsumdolorsitamet,consecteturadipiscingelit.Seddoeiusmodtemporincididuntutlaboreetdoloremagnaaliqua.Utenimadminimveniam,quisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequat.Duisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariatur.Excepteursintoccaecatcupidatatnonproident,suntinculpaquiofficiadeseruntmollitanimidestlaborumsjhshhsbsndjaksdasdjns.",
+    // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
+    // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeBaabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzzAABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ11223344556677889900JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
+    image: "ss2.png",
     status: {
       name: i < 30 ? "DONE" : i < 70 ? "PASSED" : "FAILED",
     },
   });
 }
-
-console.log(`Actual Data ${dummyData.length}`);
 
 const report = {
   project: {
@@ -822,11 +823,6 @@ const report = {
 
 (async () => {
   const reportBuilder = new ReportBuilder();
-
-  console.log(
-    "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann"
-      .length
-  );
 
   await reportBuilder.createReport(report, dummyData);
 })();

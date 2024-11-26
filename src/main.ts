@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import fs from "fs";
 import autoTable, { CellHookData } from "jspdf-autotable";
 import moment from "moment";
+import path from "path";
 
 type Report = {
   project: {
@@ -179,10 +180,14 @@ class ReportBuilder {
     const testCaseIdFontSize: number = 12;
     const imageWidth: number = 35;
     const imageHeight: number = 10;
-    const imageBuffer: Buffer = await this.getImageBinary("./LogoMandiri.png");
-    const image: string = `data:image/png;base64,${imageBuffer.toString(
-      "base64"
-    )}`;
+    // const imageBuffer: Buffer = await this.getImageBinary("./LogoMandiri.png");
+    // const image: string = `data:image/png;base64,${imageBuffer.toString(
+    //   "base64"
+    // )}`;
+    // const image = new Image();
+    // image.src = path.resolve("./LogoMandiri.png");
+    const rawImage = await fs.promises.readFile("./LogoMandiri.png");
+    const image = new Uint8Array(rawImage);
 
     // Set Image
     this.doc.addImage(
@@ -191,7 +196,9 @@ class ReportBuilder {
       this.pageWidth - this.x - imageWidth,
       this.y,
       imageWidth,
-      imageHeight
+      imageHeight,
+      "",
+      "FAST"
     );
 
     // Set Title
@@ -658,8 +665,12 @@ class ReportBuilder {
       );
 
       // Set Image
-      imageBuffer = await this.getImageBinary(`./${value.image}`);
-      image = `data:image/png;base64,${imageBuffer.toString("base64")}`;
+      // imageBuffer = await this.getImageBinary(`./${value.image}`);
+      // image = `data:image/png;base64,${imageBuffer.toString("base64")}`;
+      // const image = new Image();
+      // image.src = path.resolve(`./${value.image}`);
+      const rawImage = await fs.promises.readFile(`${value.image}`);
+      const image = new Uint8Array(rawImage);
 
       currentImagePosition = currentTitlePosition + imagePadding;
       this.doc.addImage(
@@ -668,7 +679,9 @@ class ReportBuilder {
         this.x,
         currentImagePosition,
         imageWidth,
-        imageHeight
+        imageHeight,
+        "",
+        "FAST"
       );
       this.doc.addImage(
         image,
@@ -676,7 +689,9 @@ class ReportBuilder {
         this.x,
         currentImagePosition,
         imageWidth,
-        imageHeight
+        imageHeight,
+        "",
+        "FAST"
       );
 
       // Set Description
@@ -776,11 +791,11 @@ class ReportBuilder {
 
     // this.doc.save("report.pdf");
 
-    const path = "D:/uploads/reports";
+    const rPath = path.join(__dirname, "..", "report");
 
     const output = this.doc.output("arraybuffer");
 
-    fs.writeFile(path + "/report.pdf", Buffer.from(output), (err) => {
+    fs.writeFile(path.join(rPath, "report.pdf"), Buffer.from(output), (err) => {
       if (err) {
         throw err;
       }
@@ -790,7 +805,7 @@ class ReportBuilder {
 
 let dummyData: StepData[] = [];
 
-for (let i = 1; i <= 10; i++) {
+for (let i = 1; i <= 41; i++) {
   dummyData.push({
     title: `Click Submit ${i}`,
     description: `Expected : Memastikan Berhasil Click Submit ${i}\nActual : Berhasil Click Submit ${i}\nTransaction Id : 09827372716232`,
@@ -800,7 +815,7 @@ for (let i = 1; i <= 10; i++) {
     // "Loremipsumdolorsitamet,consecteturadipiscingelit.Seddoeiusmodtemporincididuntutlaboreetdoloremagnaaliqua.Utenimadminimveniam,quisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequat.Duisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariatur.Excepteursintoccaecatcupidatatnonproident,suntinculpaquiofficiadeseruntmollitanimidestlaborumsjhshhsbsndjaksdasdjns.",
     // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
     // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeBaabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzzAABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ11223344556677889900JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
-    image: "ss2.png",
+    image: path.join(__dirname, "..", "img", `${i}.png`),
     status: {
       name: i < 30 ? "DONE" : i < 70 ? "PASSED" : "FAILED",
     },

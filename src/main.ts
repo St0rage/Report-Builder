@@ -3,6 +3,7 @@ import fs from "fs";
 import autoTable, { CellHookData } from "jspdf-autotable";
 import moment from "moment";
 import path from "path";
+import sharp from "sharp";
 
 type Report = {
   project: {
@@ -67,7 +68,7 @@ class ReportBuilder {
     ];
     const headerPosition: number = 10;
     const headerTableFontSize: number = 10;
-    const footerPosition: number = 10;
+    const footerPosition: number = 17;
     const footerLineWidth: number = 0.3;
     const footerLeftText: string = "Confidential";
     const footerRightText: string = `Page ${this.page} of ${totalPage}`;
@@ -112,11 +113,7 @@ class ReportBuilder {
     this.doc.setFont("times", "italic");
     this.doc.setFontSize(footerTextFontSize);
     const footerTextPosition: number =
-      this.pageHeight -
-      this.y +
-      footerPosition +
-      footerTextFontSize / 2.5 +
-      footerLineWidth;
+      this.pageHeight - this.y + footerPosition + footerTextFontSize / 2.5 + footerLineWidth;
 
     // Footer Line
     this.doc.setLineWidth(footerLineWidth);
@@ -132,19 +129,11 @@ class ReportBuilder {
 
     // Footer Middle Text
     const footerMiddleTextWidth: number = this.doc.getTextWidth(projectName);
-    this.doc.text(
-      projectName,
-      this.pageWidth / 2 - footerMiddleTextWidth / 2,
-      footerTextPosition
-    );
+    this.doc.text(projectName, this.pageWidth / 2 - footerMiddleTextWidth / 2, footerTextPosition);
 
     // Footer Right Text
     const footerRightTextWidth: number = this.doc.getTextWidth(footerRightText);
-    this.doc.text(
-      footerRightText,
-      this.pageWidth - this.x - footerXPadding - footerRightTextWidth,
-      footerTextPosition
-    );
+    this.doc.text(footerRightText, this.pageWidth - this.x - footerXPadding - footerRightTextWidth, footerTextPosition);
 
     this.page = this.page + 1;
     // this.doc.rect(this.x, 0, 0, this.pageHeight);
@@ -165,17 +154,11 @@ class ReportBuilder {
     });
   }
 
-  private async createCover(
-    title: string,
-    subTitle: string,
-    author: string,
-    testCaseId: string
-  ) {
+  private async createCover(title: string, subTitle: string, author: string, testCaseId: string) {
     const titleFontSize: number = 26;
     const subTitleFontSize: number = 14;
     const authorText: string = `Author`.padEnd(18, " ") + `: ${author}`;
-    const testCaseIdText: string =
-      `Test Case Id`.padEnd(15, " ") + `: ${testCaseId}`;
+    const testCaseIdText: string = `Test Case Id`.padEnd(15, " ") + `: ${testCaseId}`;
     const authorFontSize: number = 12;
     const testCaseIdFontSize: number = 12;
     const imageWidth: number = 35;
@@ -190,36 +173,19 @@ class ReportBuilder {
     const image = new Uint8Array(rawImage);
 
     // Set Image
-    this.doc.addImage(
-      image,
-      "PNG",
-      this.pageWidth - this.x - imageWidth,
-      this.y,
-      imageWidth,
-      imageHeight,
-      "",
-      "FAST"
-    );
+    this.doc.addImage(image, "PNG", this.pageWidth - this.x - imageWidth, this.y, imageWidth, imageHeight, "", "FAST");
 
     // Set Title
     this.doc.setFont("times", "normal");
     this.doc.setFontSize(titleFontSize);
     const titleWidth: number = this.doc.getTextWidth(title);
-    this.doc.text(
-      title,
-      this.pageWidth - this.x - titleWidth,
-      this.pageHeight / 2.5
-    );
+    this.doc.text(title, this.pageWidth - this.x - titleWidth, this.pageHeight / 2.5);
 
     // Set Sub Title
     this.doc.setFont("times", "italic");
     this.doc.setFontSize(subTitleFontSize);
     const subTitleWidth: number = this.doc.getTextWidth(subTitle);
-    this.doc.text(
-      subTitle,
-      this.pageWidth - this.x - subTitleWidth,
-      titleFontSize / 3 + this.pageHeight / 2.5
-    );
+    this.doc.text(subTitle, this.pageWidth - this.x - subTitleWidth, titleFontSize / 3 + this.pageHeight / 2.5);
 
     // Set Test Case Id Font And Size
     this.doc.setFont("times", "normal");
@@ -247,11 +213,7 @@ class ReportBuilder {
     );
 
     // Set Test Case Id
-    this.doc.text(
-      testCaseIdText,
-      this.pageWidth / 2 - bottomInformationWidth,
-      this.pageHeight - this.y
-    );
+    this.doc.text(testCaseIdText, this.pageWidth / 2 - bottomInformationWidth, this.pageHeight - this.y);
 
     // this.doc.rect(this.x, 0, 0, this.pageHeight);
     // this.doc.rect(this.pageWidth - this.x, 0, 0, this.pageHeight);
@@ -274,8 +236,7 @@ class ReportBuilder {
     const secondContent: string = "Document Summary";
     const contentFontSize: number = 12;
     const contentPadding: number = 5;
-    const firstPagePaddingTopContent: number =
-      this.y + titleFontSize + paddingTop + contentPadding;
+    const firstPagePaddingTopContent: number = this.y + titleFontSize + paddingTop + contentPadding;
     let tempContent: string;
 
     this.doc.setPage(currentPage);
@@ -283,17 +244,12 @@ class ReportBuilder {
     this.doc.setFont("helvetica", "bold");
     this.doc.setFontSize(titleFontSize);
     const titleWidth = this.doc.getTextWidth(title);
-    this.doc.text(
-      title,
-      this.pageWidth / 2 - titleWidth / 2,
-      this.y + paddingTop + titleFontSize / 2.5
-    );
+    this.doc.text(title, this.pageWidth / 2 - titleWidth / 2, this.y + paddingTop + titleFontSize / 2.5);
 
     const convertContentToDotted = (title: string, page: string) => {
       const titleWidth = this.doc.getTextWidth(title);
       const pageNumberWidth = this.doc.getTextWidth(page);
-      const availableWidth =
-        this.pageWidth - titleWidth - pageNumberWidth - this.x * 2;
+      const availableWidth = this.pageWidth - titleWidth - pageNumberWidth - this.x * 2;
       const dotWidth = this.doc.getTextWidth(".");
       const numberOfDots = Math.floor(availableWidth / dotWidth);
 
@@ -316,12 +272,9 @@ class ReportBuilder {
     // Set Second Content
     currentPage = Math.ceil(stepData.length / firstMaxPage) + currentPage;
     tempContent = convertContentToDotted(secondContent, currentPage.toString());
-    this.doc.textWithLink(
-      tempContent,
-      this.x,
-      firstPagePaddingTopContent + contentFontSize / 2.5,
-      { pageNumber: currentPage }
-    );
+    this.doc.textWithLink(tempContent, this.x, firstPagePaddingTopContent + contentFontSize / 2.5, {
+      pageNumber: currentPage,
+    });
 
     // Set Rest Content
     currentPage = startPage + 1;
@@ -339,10 +292,7 @@ class ReportBuilder {
         this.doc.setFontSize(contentFontSize);
         currentPage = currentPage + 1;
       }
-      tempContent = convertContentToDotted(
-        `${index + 1}. ${value.title}`,
-        restCurrentPage.toString()
-      );
+      tempContent = convertContentToDotted(`${index + 1}. ${value.title}`, restCurrentPage.toString());
       this.doc.textWithLink(
         tempContent,
         this.x,
@@ -392,11 +342,7 @@ class ReportBuilder {
       body.push(stepData.slice(0, firstMaxPage));
       let stepDataLeft: number = stepData.length - firstMaxPage;
       let startIndex: number = firstMaxPage;
-      for (
-        let i = 1;
-        i <= Math.ceil((stepData.length - firstMaxPage) / restMaxPage);
-        i++
-      ) {
+      for (let i = 1; i <= Math.ceil((stepData.length - firstMaxPage) / restMaxPage); i++) {
         if (stepDataLeft > restMaxPage) {
           body.push(stepData.slice(startIndex, startIndex + restMaxPage));
           stepDataLeft = stepDataLeft - restMaxPage;
@@ -412,11 +358,7 @@ class ReportBuilder {
     this.doc.setFont("helvetica", "bold");
     this.doc.setFontSize(titleFontSize);
     const titleWidth = this.doc.getTextWidth(title);
-    this.doc.text(
-      title,
-      this.pageWidth / 2 - titleWidth / 2,
-      this.y + paddingTop + titleFontSize / 2.5
-    );
+    this.doc.text(title, this.pageWidth / 2 - titleWidth / 2, this.y + paddingTop + titleFontSize / 2.5);
 
     // Set Summary Total
     autoTable(this.doc, {
@@ -477,9 +419,7 @@ class ReportBuilder {
     };
 
     const statusColumnTextFormat = (data: CellHookData) => {
-      data.cell.text[0] =
-        data.cell.text[0].charAt(0).toUpperCase() +
-        data.cell.text[0].slice(1).toLowerCase();
+      data.cell.text[0] = data.cell.text[0].charAt(0).toUpperCase() + data.cell.text[0].slice(1).toLowerCase();
     };
 
     let currentStartPage: number = startReportPage;
@@ -540,13 +480,9 @@ class ReportBuilder {
         },
         didDrawCell: (data) => {
           if (data.row.index > 0 && data.column.index === 0 && i === 0) {
-            this.doc.link(
-              data.cell.x,
-              data.cell.y,
-              data.cell.width,
-              data.cell.height,
-              { pageNumber: currentStartPage }
-            );
+            this.doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+              pageNumber: currentStartPage,
+            });
 
             if ((data.row.index - 1) % 2 != 0) {
               currentStartPage = currentStartPage + 1;
@@ -555,13 +491,9 @@ class ReportBuilder {
           }
           if (data.column.index === 0 && i > 0) {
             data.row.index;
-            this.doc.link(
-              data.cell.x,
-              data.cell.y,
-              data.cell.width,
-              data.cell.height,
-              { pageNumber: currentStartPage }
-            );
+            this.doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+              pageNumber: currentStartPage,
+            });
             if ((data.row.index + 1) % 2 != 0) {
               currentStartPage = currentStartPage + 1;
             }
@@ -571,6 +503,24 @@ class ReportBuilder {
       });
       currentPage++;
     }
+  }
+
+  private async getImageAndSize(
+    imagePath: string
+  ): Promise<{ image: Uint8Array; newWidth: number; newHeight: number }> {
+    const rawImage = await fs.promises.readFile(`${imagePath}`);
+    const image = new Uint8Array(rawImage);
+
+    const metadata = await sharp(image).metadata();
+
+    // let newWidth = this.pageWidth - this.x * 2;
+    // let newHeight = ((metadata?.height as number) / (metadata?.width as number)) * newWidth;
+
+    let newHeight = (this.pageHeight - this.y * 2) / 2.4;
+    console.info(newHeight);
+    let newWidth = ((metadata?.width as number) / (metadata?.height as number)) * newHeight;
+
+    return { image, newWidth, newHeight };
   }
 
   private async createContent(stepData: StepData[], startPage: number) {
@@ -593,9 +543,7 @@ class ReportBuilder {
 
     this.doc.setFontSize(fontSize);
 
-    const getDescriptionTotalHeight = (
-      description: string
-    ): [string, number] => {
+    const getDescriptionTotalHeight = (description: string): [string, number] => {
       const textHeight = fontSize / 2.5;
 
       if (description.includes("\n")) {
@@ -604,10 +552,7 @@ class ReportBuilder {
         let lines: string[] = [];
 
         splitDescription.forEach((value) => {
-          let tempLines = this.doc.splitTextToSize(
-            value,
-            this.pageWidth - this.x * 2
-          ) as string[];
+          let tempLines = this.doc.splitTextToSize(value, this.pageWidth - this.x * 2) as string[];
 
           tempLines.forEach((tempValue) => {
             lines.push(tempValue);
@@ -624,10 +569,7 @@ class ReportBuilder {
         return [formatDescription, totalHeight];
       } else {
         let formatDescription: string = "";
-        const lines = this.doc.splitTextToSize(
-          description,
-          this.pageWidth - this.x * 2
-        ) as string[];
+        const lines = this.doc.splitTextToSize(description, this.pageWidth - this.x * 2) as string[];
 
         const totalLines: number = lines.length > 5 ? 5 : lines.length;
         const totalHeight: number = textHeight * totalLines;
@@ -654,55 +596,42 @@ class ReportBuilder {
         currentTitlePosition = this.y + titlePadding * 2;
         currentStartPage++;
       } else {
-        currentTitlePosition =
-          currentDescriptionPosition + descriptionHeight + titlePadding;
+        currentTitlePosition = currentDescriptionPosition + descriptionHeight + titlePadding;
       }
 
-      this.doc.text(
-        `${index + 1}. ${value.title}`,
-        this.x,
-        currentTitlePosition
-      );
+      this.doc.text(`${index + 1}. ${value.title}`, this.x, currentTitlePosition);
 
       // Set Image
       // imageBuffer = await this.getImageBinary(`./${value.image}`);
       // image = `data:image/png;base64,${imageBuffer.toString("base64")}`;
       // const image = new Image();
       // image.src = path.resolve(`./${value.image}`);
-      const rawImage = await fs.promises.readFile(`${value.image}`);
-      const image = new Uint8Array(rawImage);
+      // const rawImage = await fs.promises.readFile(`${value.image}`);
+      // const image = new Uint8Array(rawImage);
+      const { image, newWidth, newHeight } = await this.getImageAndSize(value.image);
 
       currentImagePosition = currentTitlePosition + imagePadding;
+      // this.doc.addImage(image, "PNG", this.x, currentImagePosition, imageWidth, imageHeight, "", "FAST");
+      // this.doc.addImage(image, "PNG", this.x, currentImagePosition, imageWidth, imageHeight, "", "FAST");
+
       this.doc.addImage(
         image,
         "PNG",
-        this.x,
+        this.pageWidth / 2 - newWidth / 2,
         currentImagePosition,
-        imageWidth,
-        imageHeight,
+        newWidth,
+        newHeight,
         "",
         "FAST"
       );
-      this.doc.addImage(
-        image,
-        "PNG",
-        this.x,
-        currentImagePosition,
-        imageWidth,
-        imageHeight,
-        "",
-        "FAST"
-      );
+      // this.doc.addImage(image, "PNG", this.x, currentImagePosition, imageWidth, imageHeight, "", "FAST");
 
       // Set Description
       this.doc.setFont("Times", "normal");
       this.doc.setTextColor("black");
 
-      currentDescriptionPosition =
-        currentImagePosition + imageHeight + descriptionPadding;
-      [newDescription, descriptionHeight] = getDescriptionTotalHeight(
-        value.description
-      );
+      currentDescriptionPosition = currentImagePosition + newHeight + descriptionPadding;
+      [newDescription, descriptionHeight] = getDescriptionTotalHeight(value.description);
       this.doc.text(newDescription, this.x, currentDescriptionPosition);
 
       index++;
@@ -724,25 +653,15 @@ class ReportBuilder {
     const tableOfContentFirstMaxPage: number = 41;
     const tableOfContentRestMaxPage: number = 46;
     const tableOfContentTotalPage: number =
-      Math.ceil(
-        (stepDataLength - tableOfContentFirstMaxPage) /
-          tableOfContentRestMaxPage
-      ) + 1;
+      Math.ceil((stepDataLength - tableOfContentFirstMaxPage) / tableOfContentRestMaxPage) + 1;
     const documentSummaryHeader: {} = { title: "Step Name", status: "Status" };
     const documentSummaryStartPage: number = tableOfContentTotalPage + 2;
     const documentSummaryFirstMaxPage: number = 34;
     const documentSummaryRestMaxPage: number = 40;
     const documentSummaryTotalPage: number =
-      Math.ceil(
-        (stepDataLength - documentSummaryFirstMaxPage) /
-          documentSummaryRestMaxPage
-      ) + 1;
-    const startPageReport: number =
-      documentSummaryTotalPage + tableOfContentTotalPage + 2;
-    const totalAllPage: number =
-      Math.ceil(stepDataLength / 2) +
-      tableOfContentTotalPage +
-      documentSummaryTotalPage;
+      Math.ceil((stepDataLength - documentSummaryFirstMaxPage) / documentSummaryRestMaxPage) + 1;
+    const startPageReport: number = documentSummaryTotalPage + tableOfContentTotalPage + 2;
+    const totalAllPage: number = Math.ceil(stepDataLength / 2) + tableOfContentTotalPage + documentSummaryTotalPage;
     let newStepData: {}[] = [];
 
     stepData.forEach((value) => {
@@ -755,15 +674,7 @@ class ReportBuilder {
     await this.createCover(title, subTitle, author, testCase);
 
     for (let i = 0; i < totalAllPage; i++) {
-      this.addPage(
-        title,
-        projectName,
-        author,
-        tool,
-        testCase,
-        dateString,
-        totalAllPage + 1
-      );
+      this.addPage(title, projectName, author, tool, testCase, dateString, totalAllPage + 1);
     }
 
     await this.createTableOfContent(
@@ -815,7 +726,7 @@ for (let i = 1; i <= 41; i++) {
     // "Loremipsumdolorsitamet,consecteturadipiscingelit.Seddoeiusmodtemporincididuntutlaboreetdoloremagnaaliqua.Utenimadminimveniam,quisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequat.Duisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariatur.Excepteursintoccaecatcupidatatnonproident,suntinculpaquiofficiadeseruntmollitanimidestlaborumsjhshhsbsndjaksdasdjns.",
     // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
     // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeBaabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzzAABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ11223344556677889900JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
-    image: path.join(__dirname, "..", "img", `${i}.png`),
+    image: path.join(__dirname, "..", `${i % 2 === 0 ? "ss2" : "mobile"}.png`),
     status: {
       name: i < 30 ? "DONE" : i < 70 ? "PASSED" : "FAILED",
     },

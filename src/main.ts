@@ -510,8 +510,8 @@ class ReportBuilder {
   ): Promise<{ image: Uint8Array; newWidth: number; newHeight: number }> {
     const rawImage = await fs.promises.readFile(`${imagePath}`);
     const image = new Uint8Array(rawImage);
-
     const metadata = await sharp(image).metadata();
+    const maxWidth = this.pageWidth - this.x * 2;
 
     // let newWidth = this.pageWidth - this.x * 2;
     // let newHeight = ((metadata?.height as number) / (metadata?.width as number)) * newWidth;
@@ -519,6 +519,10 @@ class ReportBuilder {
     let newHeight = (this.pageHeight - this.y * 2) / 2.4;
     console.info(newHeight);
     let newWidth = ((metadata?.width as number) / (metadata?.height as number)) * newHeight;
+
+    if (newWidth > maxWidth) {
+      newWidth = maxWidth;
+    }
 
     return { image, newWidth, newHeight };
   }
@@ -726,7 +730,7 @@ for (let i = 1; i <= 41; i++) {
     // "Loremipsumdolorsitamet,consecteturadipiscingelit.Seddoeiusmodtemporincididuntutlaboreetdoloremagnaaliqua.Utenimadminimveniam,quisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequat.Duisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariatur.Excepteursintoccaecatcupidatatnonproident,suntinculpaquiofficiadeseruntmollitanimidestlaborumsjhshhsbsndjaksdasdjns.",
     // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
     // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeBaabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzzAABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ11223344556677889900JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
-    image: path.join(__dirname, "..", `${i % 2 === 0 ? "ss2" : "mobile"}.png`),
+    image: path.join(__dirname, "..", `${i % 2 === 0 ? "ss3" : "mobile"}.png`),
     status: {
       name: i < 30 ? "DONE" : i < 70 ? "PASSED" : "FAILED",
     },

@@ -135,7 +135,7 @@ class ReportBuilder {
     const footerRightTextWidth: number = this.doc.getTextWidth(footerRightText);
     this.doc.text(footerRightText, this.pageWidth - this.x - footerXPadding - footerRightTextWidth, footerTextPosition);
 
-    this.page = this.page + 1;
+    // this.page = this.page + 1;
     // this.doc.rect(this.x, 0, 0, this.pageHeight);
     // this.doc.rect(this.pageWidth - this.x, 0, 0, this.pageHeight);
     // this.doc.rect(0, this.y, this.pageWidth, 0);
@@ -517,7 +517,7 @@ class ReportBuilder {
     // let newHeight = ((metadata?.height as number) / (metadata?.width as number)) * newWidth;
 
     let newHeight = (this.pageHeight - this.y * 2) / 2.4;
-    console.info(newHeight);
+    // console.info(newHeight);
     let newWidth = ((metadata?.width as number) / (metadata?.height as number)) * newHeight;
 
     if (newWidth > maxWidth) {
@@ -657,13 +657,14 @@ class ReportBuilder {
     const tableOfContentFirstMaxPage: number = 41;
     const tableOfContentRestMaxPage: number = 46;
     const tableOfContentTotalPage: number =
-      Math.ceil((stepDataLength - tableOfContentFirstMaxPage) / tableOfContentRestMaxPage) + 1;
+      Math.ceil(Math.max(stepDataLength - tableOfContentFirstMaxPage) / tableOfContentRestMaxPage) + 1;
     const documentSummaryHeader: {} = { title: "Step Name", status: "Status" };
     const documentSummaryStartPage: number = tableOfContentTotalPage + 2;
     const documentSummaryFirstMaxPage: number = 34;
     const documentSummaryRestMaxPage: number = 40;
     const documentSummaryTotalPage: number =
-      Math.ceil((stepDataLength - documentSummaryFirstMaxPage) / documentSummaryRestMaxPage) + 1;
+      Math.ceil(Math.max(stepDataLength + 1 - documentSummaryFirstMaxPage) / documentSummaryRestMaxPage) + 1;
+
     const startPageReport: number = documentSummaryTotalPage + tableOfContentTotalPage + 2;
     const totalAllPage: number = Math.ceil(stepDataLength / 2) + tableOfContentTotalPage + documentSummaryTotalPage;
     let newStepData: {}[] = [];
@@ -720,7 +721,7 @@ class ReportBuilder {
 
 let dummyData: StepData[] = [];
 
-for (let i = 1; i <= 41; i++) {
+for (let i = 1; i <= 34; i++) {
   dummyData.push({
     title: `Click Submit ${i}`,
     description: `Expected : Memastikan Berhasil Click Submit ${i}\nActual : Berhasil Click Submit ${i}\nTransaction Id : 09827372716232`,

@@ -1201,6 +1201,12 @@ class ReportBuilder {
       // Set Title
       this.doc.setFont("times", "bold");
       this.doc.setFontSize(fontSize);
+      if (contentItem.status === "FAILED") {
+        this.doc.setTextColor(247, 59, 59);
+      } else {
+        this.doc.setTextColor(contentItem.status === "DONE" ? "black" : "green");
+      }
+
       if (Number(contentItem.linkNumber) !== previousLink && contentItem.title.includes(".1 ")) {
         currentTitlePosition = this.y + this.yPadding + titlePadding + 8;
       } else if (Number(contentItem.linkNumber) !== previousLink && !contentItem.title.includes(".1 ")) {
@@ -1226,6 +1232,7 @@ class ReportBuilder {
 
       // Set Description
       this.doc.setFont("times", "normal");
+      this.doc.setTextColor("black");
       currentDescriptionPosition = currentImagePosition + newImageHeight + descPadding;
       [newDesc, descHeight] = getDescriptionTotalHeight(contentItem.description);
       this.doc.text(newDesc, this.x + this.xPadding, currentDescriptionPosition);
@@ -1318,7 +1325,7 @@ class ReportBuilder {
       if (sectionIdx != 0) linkNumber++;
 
       const sectionBase = {
-        title: `${sectionIdx + 1} ${sectionVal.section}`,
+        title: `${sectionIdx + 1}. ${sectionVal.section}`,
         linkNumber: linkNumber.toString(),
         status: "-",
       };

@@ -711,7 +711,7 @@ class ReportBuilder {
 
     const output = this.doc.output("arraybuffer");
 
-    fs.writeFile(path.join(rPath, "report.pdf"), Buffer.from(output), (err) => {
+    fs.writeFile(path.join(rPath, "report.pdf"), Buffer.from(output) as any, (err) => {
       if (err) {
         throw err;
       }

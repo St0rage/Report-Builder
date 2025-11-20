@@ -126,22 +126,42 @@ class ReportBuilder {
   private async createCover(coverData: CoverData) {
     const coverX = 20;
     const coverY = 35;
-    const projectNameFontSize = 26;
+    const projectNameFontSize = 24;
     const activityNameFontSize = 18;
     const testCaseNameFontSize = 12;
-    const imageWidth = 35;
-    const imageHeight = 10;
+    const headerPosition = 8;
+    const headerImagewidth = 24;
+    const headerImageHeight = 7;
+    const imageWidth = 56;
+    const imageHeight = 16;
     const titleFontSize = 20;
     const title = "Automation Test Execution Document";
+    const textFontSize = 10;
     const authorNameFontSize = 14;
     const authorName = `Prepared By ${coverData.authorName}`;
     const dateFontSize = 12;
     const copyRightFontSize = 11;
-    const copyRightNotice = "COPYRIGHT NOTICE";
-    const copyRight = "Copyright © (2025) by BNI-APS";
+    // const copyRightNotice = " ";
+    const copyRight = "CONFIDENTIALITY";
     const copyRightDetailFontSize = 8;
     const copyRightDetail =
-      "All right reserved. This material is confidential and proprietary to BNI-STI and no part of this material should be reproduced, published in any form by any means, electronic or mechanical including photocopy or any information storage or retrieval system nor should the material be disclosed to third parties without the express written authorization of BNI-APS";
+      "This document contains proprietary information that is confidential to Bank Negara Indonesia. Disclosure of this document in full or in part, may result in material damage to Bank Negara Indonesia. ";
+
+    // Set Header Left Image
+    const rawHeaderImage = await fs.promises.readFile("./LogoBNI.png");
+    const headerImage = new Uint8Array(rawHeaderImage);
+    this.doc.addImage(headerImage, "PNG", this.x + this.xPadding, headerPosition, headerImagewidth, headerImageHeight);
+
+    this.doc.setFontSize(textFontSize);
+
+    // Set Header Right Text
+    const headerRightTextWidth = this.doc.getTextWidth(title);
+    this.doc.setFont("times", "bold");
+    this.doc.text(
+      title,
+      this.pageWidth - this.x - headerRightTextWidth - this.xPadding,
+      headerPosition + 1.2 + headerImageHeight / 2
+    );
 
     const rawImage = await fs.promises.readFile("./LogoBNI.png");
     const image = new Uint8Array(rawImage);
@@ -150,7 +170,7 @@ class ReportBuilder {
     this.doc.addImage(image, "PNG", this.pageWidth - coverX - imageWidth, coverY, imageWidth, imageHeight, "", "FAST");
 
     // Set Project Name
-    this.doc.setFont("times", "normal");
+    this.doc.setFont("times", "bold");
     this.doc.setFontSize(projectNameFontSize);
     const projectNameWidth = this.doc.getTextWidth(coverData.projectName);
     this.doc.text(coverData.projectName, this.pageWidth - coverX - projectNameWidth, this.pageHeight / 2.5);
@@ -200,7 +220,7 @@ class ReportBuilder {
     this.doc.setTextColor(125, 125, 125);
     let newCpRightDetail = "";
     const cpRightDtlLines = this.doc.splitTextToSize(copyRightDetail, this.pageWidth - coverX * 2) as string[];
-    const cpRightDtlHeigth: number = (copyRightDetailFontSize / 3) * cpRightDtlLines.length;
+    const cpRightDtlHeigth: number = (copyRightDetailFontSize / 2.1) * cpRightDtlLines.length;
 
     for (let i = 0; i < cpRightDtlLines.length; i++) {
       newCpRightDetail += `${cpRightDtlLines[i]}${i !== cpRightDtlLines.length - 1 ? "\n" : ""}`;
@@ -215,9 +235,9 @@ class ReportBuilder {
     this.doc.text(copyRight, coverX, copyRightHeight);
 
     // Set Footer Copy Right Notice
-    this.doc.setFont("helvetica", "normal");
-    this.doc.setFontSize(copyRightFontSize);
-    this.doc.text(copyRightNotice, coverX, copyRightHeight - 6);
+    // this.doc.setFont("helvetica", "normal");
+    // this.doc.setFontSize(copyRightFontSize);
+    // this.doc.text(copyRightNotice, coverX, copyRightHeight - 6);
 
     // this.doc.rect(this.x, 0, 0, this.pageHeight);
     // this.doc.rect(this.pageWidth - this.x, 0, 0, this.pageHeight);
@@ -241,14 +261,14 @@ class ReportBuilder {
     autoTable(this.doc, {
       head: [],
       body: [
-        ["Changes ID", "[Diisi dengan Nomor Proyek/CR/IC/AI/SC/IR/SR]"],
-        ["Changes Name", "[Diisi dengan nama Changes]"],
-        ["Data of Request", "[Diisi dengan tanggal diterbitkan]"],
-        ["IT Project Manager", "[Diisi dengan nama PIC IT PM]"],
-        ["Team Lead Tester", "[Diisi dengan nama Team Lead Tester]"],
+        ["Changes ID", ""],
+        ["Changes Name", ""],
+        ["Data of Request", ""],
+        ["IT Project Manager", ""],
+        ["Team Lead Tester", ""],
         [
           "Attachments",
-          "[Diisi Test Script SIT, Laporan SIT, termasuk daftar hadir dan screen capture hardcopy/soft copy]",
+          "\n",
         ],
         [
           {
@@ -259,7 +279,7 @@ class ReportBuilder {
         [
           {
             content:
-              "Pihak-pihak yang bertandatangan di bawah ini menyatakan bahwa telah dilaksanakan System Integration Test (SIT), untuk [App ID - nama Aplikasi] - deskripsi singkat pengembangan dengan ruang lingkup testing/scenario yang tercantum dalam final test script SIT dengan hasil tercantum pada Laporan SIT.\n\nSeluruh test script yang disepakati bersama untuk dijalankan dalam SIT termasuk Impacted feature yang di informasikan oleh pihak pengembangan telah berstatus tested good.",
+              "\n\n\n\n\n\n\n\n",
             colSpan: 2,
           },
         ],
@@ -309,13 +329,13 @@ class ReportBuilder {
       head: [],
       body: [
         [
-          "Business Unit\n\n\n\n\n\n[Nama Pegawai]\n---------------------------------------------------\nDept. Head [Nama Departemen Business Unit]\nDivisi [Nama Divisi Business Unit]\nPT. Bank Negara Indonesia (Persero) Tbk.",
-          "IT Application Service\n\n\n\n\n\n[Nama Pegawai]\n---------------------------------------------------\nDept. Head IT Testing & Source Control\nDivisi IT Application Service\nPT. Bank Negara Indonesia (Persero) Tbk.",
+          "Business Unit\n\n\n\n\n\n\n---------------------------------------------------\nDept. Head \nDivisi \nPT. Bank Negara Indonesia (Persero) Tbk.",
+          "IT Application Service\n\n\n\n\n\n\n---------------------------------------------------\nDept. Head IT Testing & Source Control\nDivisi IT Application Service\nPT. Bank Negara Indonesia (Persero) Tbk.",
         ],
         [
           {
             content:
-              "IT Project Manager\n\n\n\n\n\n[Nama Pegawai]\n---------------------------------------------------\nDept. Head IT Strategi Partner\nDivisi IT Strategy & Architecture\nPT. Bank Negara Indonesia (Persero) Tbk.",
+              "IT Project Manager\n\n\n\n\n\n\n---------------------------------------------------\nDept. Head IT Strategi Partner\nDivisi IT Strategy & Architecture\nPT. Bank Negara Indonesia (Persero) Tbk.",
             colSpan: 2,
           },
         ],

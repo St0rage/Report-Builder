@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import moment from "moment";
 import autoTable, { CellHookData } from "jspdf-autotable";
-import sharp from "sharp";
 
 type CoverData = {
   projectName: string;
@@ -13,15 +12,9 @@ type CoverData = {
   date: string;
 };
 
-type SectionData = {
-  section: string;
-  step: StepData[];
-};
-
 type StepData = {
   title: string;
   description: string;
-  image: string;
   status: {
     name: string;
   };
@@ -37,11 +30,6 @@ type SummaryData = {
   title: string;
   linkNumber: string;
   status: string;
-};
-
-type ContentData = SummaryData & {
-  description: string;
-  image: string;
 };
 
 class ReportBuilder {
@@ -917,13 +905,13 @@ class ReportBuilder {
     summaryData.forEach((val, idx) => {
       if (currentDataIndex === currentPageLength) setNewPage();
 
-      if (val.status === "-") {
-        this.doc.setFont("times", "bold");
-        tempContent = convertContentToDotted(val.title, val.linkNumber);
-      } else {
-        this.doc.setFont("times", "normal");
-        tempContent = convertContentToDotted(`   ${val.title}`, val.linkNumber);
-      }
+      this.doc.setFont("times", "normal");
+      tempContent = convertContentToDotted(val.title, val.linkNumber);
+      // if (val.status === "-") {
+      // } else {
+      //   this.doc.setFont("times", "normal");
+      //   tempContent = convertContentToDotted(`   ${val.title}`, val.linkNumber);
+      // }
 
       currentContentPadding += fontSize / 2.3;
       this.doc.textWithLink(tempContent, this.x + this.xPadding, currentContentPadding, {
@@ -1141,137 +1129,146 @@ class ReportBuilder {
     }
   }
 
-  private async createContent(contentData: ContentData[]) {
-    const sectionFontSize = 12;
+  private async createContent(stepsData: StepData[], startPage: number): Promise<SummaryData[]> {
     const fontSize = 11;
     const titlePadding = 2;
     const descPadding = 6;
-    const imagePadding = 3;
 
-    const getImageAndSize = async (
-      imagePath: string
-    ): Promise<{ image: Uint8Array; newImageWidth: number; newImageHeight: number }> => {
-      const rawImage = await fs.promises.readFile(`${imagePath}`);
-      const image = new Uint8Array(rawImage);
-      const metadata = await sharp(image).metadata();
-      const maxWidth = this.pageWidth - (this.x + this.xPadding + 16) * 2;
-
-      let newImageHeight = (this.pageHeight - (this.y + this.yPadding + 16) * 2) / 2.4;
-      let newImageWidth = ((metadata?.width as number) / (metadata?.height as number)) * newImageHeight;
-
-      if (newImageWidth > maxWidth) {
-        newImageWidth = maxWidth;
-      }
-
-      return { image, newImageWidth, newImageHeight };
-    };
-
-    const getDescriptionTotalHeight = (description: string): [string, number] => {
+    const splitDescription = (desc: string, allowedDescHeight: number): [string, number, string] => {
+      let allLines: string[] = [];
+      const fitLines: string[] = [];
+      const overflowLines: string[] = [];
       let lineHeight: number = 0;
+      let usedHeight: number = 0;
+      let fitLineHeight: number = 0;
 
-      if (description.includes("\n")) {
-        let formatDescription: string = "";
-        const splitDescription = description.split("\n");
-        let lines: string[] = [];
+      if (desc.includes("\n")) {
+        const lines = desc.split("\n");
 
-        splitDescription.forEach((value) => {
+        lines.forEach((value) => {
           let tempLines = this.doc.splitTextToSize(value, this.pageWidth - (this.x + this.xPadding) * 2) as string[];
 
           tempLines.forEach((tempValue) => {
-            lines.push(tempValue);
+            allLines.push(tempValue);
           });
         });
-
-        const totalLines: number = lines.length > 5 ? 5 : lines.length;
-
-        for (let i = 0; i < totalLines; i++) {
-          formatDescription += `${lines[i]}${i === totalLines ? "" : "\n"}`;
-          let dim = this.doc.getTextDimensions(lines[i]);
-          lineHeight += dim.h * 1.15;
-        }
-
-        return [formatDescription, lineHeight];
       } else {
-        let formatDescription: string = "";
-        const lines = this.doc.splitTextToSize(description, this.pageWidth - (this.x + this.xPadding) * 2) as string[];
-
-        const totalLines: number = lines.length > 5 ? 5 : lines.length;
-
-        for (let i = 0; i < totalLines; i++) {
-          formatDescription += `${lines[i]}${i === totalLines ? "" : "\n"}`;
-          let dim = this.doc.getTextDimensions(lines[i]);
-          lineHeight += dim.h * 1.15;
-        }
-
-        return [formatDescription, lineHeight];
+        allLines = this.doc.splitTextToSize(desc, this.pageWidth - (this.x + this.xPadding) * 2) as string[];
       }
+
+      for (const line of allLines) {
+        lineHeight = this.doc.getTextDimensions(line).h * 1.15;
+        if (usedHeight + lineHeight <= allowedDescHeight) {
+          fitLines.push(line);
+          fitLineHeight += lineHeight;
+          usedHeight += lineHeight;
+        } else {
+          overflowLines.push(line);
+        }
+      }
+
+      return [fitLines.join("\n"), fitLineHeight, overflowLines.join("\n")];
     };
 
-    let currentTitlePosition: number = 0;
-    let currentImagePosition: number = 0;
+    const summaryData: SummaryData[] = [];
+    let currentPage = startPage;
+    let remainingSpace = this.pageHeight - this.y * 2;
+    let currentTitlePosition: number = this.y + this.yPadding + 4;
     let currentDescriptionPosition: number = 0;
-    let image: Uint8Array;
-    let newImageWidth: number;
-    let newImageHeight: number;
-    let newDesc: string = "";
-    let descHeight: number = 0;
-    let previousLink: number = 0;
+    let fitDescHeight: number = 0;
 
-    for (const contentItem of contentData) {
-      this.doc.setPage(Number(contentItem.linkNumber));
+    const getTitleHeight = (title: string, isFirstTitle: boolean): number => {
+      let titleHeight: number = 0;
+      let titleBlockHeight: number = 0;
 
-      // Set Section
-      if (contentItem.status === "-") {
-        this.doc.setFont("times", "bold");
-        this.doc.setFontSize(sectionFontSize);
-        const titleWidth = this.doc.getTextWidth(contentItem.title);
-        const titlePosition = this.y + this.yPadding + 3;
-        this.doc.text(contentItem.title, this.pageWidth / 2 - titleWidth / 2, titlePosition);
+      // Get Section Height And Title
+      this.doc.setFont("times", "bold");
+      this.doc.setFontSize(fontSize);
+      titleHeight = this.doc.getTextDimensions(title).h * 1.15;
+      if (isFirstTitle) {
+        titleBlockHeight = this.yPadding + titlePadding + 4 + titleHeight + descPadding;
+      } else {
+        titleBlockHeight = titlePadding + titleHeight + descPadding;
+      }
 
-        continue;
+      return titleBlockHeight;
+    };
+
+    const drawContent = async (stepData: StepData, titleNum: number, isFirstDraw: boolean) => {
+      let fitDesc: string = "";
+      let overflowDesc: string = "";
+      const title: string = `${titleNum}. ${stepData.title}`;
+      const titleBlockHeight = getTitleHeight(title, isFirstDraw);
+
+      if (titleBlockHeight > remainingSpace) {
+        currentPage++;
+        remainingSpace = this.pageHeight - this.y * 2;
+        await this.addPage(currentPage);
+        this.doc.setPage(currentPage);
+        currentTitlePosition = this.y + this.yPadding + 4;
+      } else {
+        if (isFirstDraw) {
+          currentTitlePosition += currentDescriptionPosition + fitDescHeight + titlePadding;
+        } else {
+          currentTitlePosition = currentDescriptionPosition + fitDescHeight + titlePadding;
+        }
       }
 
       // Set Title
       this.doc.setFont("times", "bold");
       this.doc.setFontSize(fontSize);
-      if (contentItem.status === "FAILED") {
+      if (stepData.status.name === "FAILED") {
         this.doc.setTextColor(247, 59, 59);
       } else {
-        this.doc.setTextColor(contentItem.status === "DONE" ? "black" : "green");
+        this.doc.setTextColor(stepData.status.name === "DONE" ? "black" : "green");
       }
-
-      if (Number(contentItem.linkNumber) !== previousLink && contentItem.title.includes(".1 ")) {
-        currentTitlePosition = this.y + this.yPadding + titlePadding + 8;
-      } else if (Number(contentItem.linkNumber) !== previousLink && !contentItem.title.includes(".1 ")) {
-        currentTitlePosition = this.y + this.yPadding + titlePadding + 4;
-      } else {
-        currentTitlePosition = currentDescriptionPosition + descHeight + titlePadding;
-      }
-      this.doc.text(contentItem.title, this.x + this.xPadding, currentTitlePosition);
-
-      // Set Image
-      ({ image, newImageWidth, newImageHeight } = await getImageAndSize(contentItem.image));
-      currentImagePosition = currentTitlePosition + imagePadding;
-      this.doc.addImage(
-        image,
-        "PNG",
-        this.pageWidth / 2 - newImageWidth / 2,
-        currentImagePosition,
-        newImageWidth,
-        newImageHeight,
-        "",
-        "FAST"
-      );
+      // currentTitlePosition += currentDescriptionPosition + fitDescHeight + titlePadding;
+      this.doc.text(title, this.x + this.xPadding, currentTitlePosition);
+      summaryData.push({
+        title: title,
+        linkNumber: currentPage.toString(),
+        status: stepData.status.name,
+      });
 
       // Set Description
       this.doc.setFont("times", "normal");
       this.doc.setTextColor("black");
-      currentDescriptionPosition = currentImagePosition + newImageHeight + descPadding;
-      [newDesc, descHeight] = getDescriptionTotalHeight(contentItem.description);
-      this.doc.text(newDesc, this.x + this.xPadding, currentDescriptionPosition);
+      this.doc.setFontSize(fontSize);
+      remainingSpace -= titleBlockHeight;
+      [fitDesc, fitDescHeight, overflowDesc] = splitDescription(stepData.description, remainingSpace);
+      currentDescriptionPosition = currentTitlePosition + descPadding;
+      this.doc.text(fitDesc, this.x + this.xPadding, currentDescriptionPosition);
+      remainingSpace -= fitDescHeight;
+      while (overflowDesc.length > 0) {
+        currentPage++;
+        remainingSpace = this.pageHeight - this.y * 2;
+        await this.addPage(currentPage);
+        this.doc.setPage(currentPage);
+        this.doc.setFont("times", "normal");
+        this.doc.setTextColor("black");
+        this.doc.setFontSize(fontSize);
+        remainingSpace -= titleBlockHeight;
+        [fitDesc, fitDescHeight, overflowDesc] = splitDescription(overflowDesc, remainingSpace);
+        currentDescriptionPosition = this.y + this.yPadding + 4;
+        this.doc.text(fitDesc, this.x + this.xPadding, currentDescriptionPosition);
+        remainingSpace -= fitDescHeight;
+      }
+    };
 
-      previousLink = Number(contentItem.linkNumber);
+    await this.addPage(currentPage);
+    this.doc.setPage(currentPage);
+
+    let stepIndex = 0;
+    for (const stepData of stepsData) {
+      if (stepIndex === 0) {
+        await drawContent(stepData, stepIndex + 1, true);
+      } else {
+        await drawContent(stepData, stepIndex + 1, false);
+      }
+      stepIndex++;
     }
+
+    return summaryData;
   }
 
   private async wrapText(text: string, fontSize: number): Promise<[string, number]> {
@@ -1288,7 +1285,7 @@ class ReportBuilder {
     return [newText, lineHeight];
   }
 
-  public async createReport(data: SectionData[]) {
+  public async createReport(stepsData: StepData[]) {
     moment.locale("id");
     const coverData: CoverData = {
       projectName: "BNI API Gateway",
@@ -1298,14 +1295,7 @@ class ReportBuilder {
       date: moment().format("DD-MM-YYYY_HH:mm:ss"),
     };
     // Content Page
-    const stepDataTotalLength = data.reduce((acc, cur) => acc + cur.step.length, 0);
-    let contentTotalPage = 0;
-
-    data.forEach((value, index) => {
-      contentTotalPage += Math.ceil(value.step.length / 2);
-    });
-
-    const sectionTotalLength = data.length;
+    const stepDataTotalLength = stepsData.length;
     // Harcoded Page
     const coverTotalPage = 1;
     const beritaAcaraTotalPage = 4;
@@ -1313,17 +1303,14 @@ class ReportBuilder {
     const tocStartPage = 6;
     const tocFirstPageLength = 46;
     const tocRestPageLength = 51;
-    const tocTotalPage =
-      Math.ceil(Math.max(0, stepDataTotalLength + sectionTotalLength - tocFirstPageLength) / tocRestPageLength) + 1;
+    const tocTotalPage = Math.ceil(Math.max(0, stepDataTotalLength - tocFirstPageLength) / tocRestPageLength) + 1;
     const docSummStartPage = coverTotalPage + beritaAcaraTotalPage + tocTotalPage + 1;
     const docSummFirstPageLength = 34;
     const docSummRestPageLength = 40;
     const docSummTotalPage =
-      Math.ceil(
-        Math.max(0, stepDataTotalLength + sectionTotalLength - docSummFirstPageLength) / docSummRestPageLength
-      ) + 1;
+      Math.ceil(Math.max(0, stepDataTotalLength - docSummFirstPageLength) / docSummRestPageLength) + 1;
     // Total Page
-    const totalPage = beritaAcaraTotalPage + tocTotalPage + docSummTotalPage + contentTotalPage;
+    const totalPage = beritaAcaraTotalPage + tocTotalPage + docSummTotalPage;
     const startContentNum = coverTotalPage + beritaAcaraTotalPage + tocTotalPage + docSummTotalPage + 1;
 
     await this.createCover(coverData);
@@ -1337,53 +1324,35 @@ class ReportBuilder {
     await this.createBeritaAcaraPage3(4);
     await this.createBeritaAcaraPage4(5);
 
-    // Create Summary and ContentData
-    const summaryData: SummaryData[] = [];
-    const contentData: ContentData[] = [];
-    const summaryStatus: SummaryStatus = {
-      totalPassed: data.reduce((acc, section) => {
-        return acc + section.step.filter((step) => step.status.name === "PASSED").length;
-      }, 0),
-      totalFailed: data.reduce((acc, section) => {
-        return acc + section.step.filter((step) => step.status.name === "FAILED").length;
-      }, 0),
-      totalDone: data.reduce((acc, section) => {
-        return acc + section.step.filter((step) => step.status.name === "DONE").length;
-      }, 0),
-    };
-
-    let linkNumber = startContentNum;
-
-    data.forEach((sectionVal, sectionIdx) => {
-      if (sectionIdx != 0) linkNumber++;
-
-      const sectionBase = {
-        title: `${sectionIdx + 1}. ${sectionVal.section}`,
-        linkNumber: linkNumber.toString(),
-        status: "-",
-      };
-
-      summaryData.push(sectionBase);
-      contentData.push({ ...sectionBase, description: "-", image: "-" });
-
-      sectionVal.step.forEach((stepVal, stepIdx) => {
-        const stepBase = {
-          title: `${sectionIdx + 1}.${stepIdx + 1} ${stepVal.title}`,
-          linkNumber: linkNumber.toString(),
-          status: stepVal.status.name,
-        };
-
-        summaryData.push(stepBase);
-        contentData.push({ ...stepBase, description: stepVal.description, image: stepVal.image });
-
-        if ((stepIdx + 1) % 2 === 0 && stepIdx !== sectionVal.step.length - 1) linkNumber++;
-      });
-    });
+    // Content
+    const summaryData = await this.createContent(stepsData, startContentNum);
 
     // Table of Content
     await this.createTableOfContent(summaryData, tocStartPage, docSummStartPage, tocFirstPageLength, tocRestPageLength);
 
     // Document Summary Pages
+    const summaryStatus: SummaryStatus = summaryData.reduce(
+      (acc, item) => {
+        switch (item.status) {
+          case "PASSED":
+            acc.totalPassed++;
+            break;
+          case "FAILED":
+            acc.totalFailed++;
+            break;
+          case "DONE":
+            acc.totalDone++;
+            break;
+        }
+        return acc;
+      },
+      {
+        totalPassed: 0,
+        totalFailed: 0,
+        totalDone: 0,
+      }
+    );
+
     await this.createDocumentSummary(
       summaryData,
       docSummStartPage,
@@ -1392,13 +1361,63 @@ class ReportBuilder {
       summaryStatus
     );
 
-    await this.createContent(contentData);
+    // // Create Summary and ContentData
+    // const summaryData: SummaryData[] = [];
+    // const contentData: ContentData[] = [];
+    // const summaryStatus: SummaryStatus = {
+    //   totalPassed: data.reduce((acc, section) => {
+    //     return acc + section.step.filter((step) => step.status.name === "PASSED").length;
+    //   }, 0),
+    //   totalFailed: data.reduce((acc, section) => {
+    //     return acc + section.step.filter((step) => step.status.name === "FAILED").length;
+    //   }, 0),
+    //   totalDone: data.reduce((acc, section) => {
+    //     return acc + section.step.filter((step) => step.status.name === "DONE").length;
+    //   }, 0),
+    // };
+
+    // let linkNumber = startContentNum;
+
+    // data.forEach((sectionVal, sectionIdx) => {
+    //   if (sectionIdx != 0) linkNumber++;
+
+    //   const sectionBase = {
+    //     title: `${sectionIdx + 1}. ${sectionVal.section}`,
+    //     linkNumber: linkNumber.toString(),
+    //     status: "-",
+    //   };
+
+    //   summaryData.push(sectionBase);
+    //   contentData.push({ ...sectionBase, description: "-", image: "-" });
+
+    //   sectionVal.step.forEach((stepVal, stepIdx) => {
+    //     const stepBase = {
+    //       title: `${sectionIdx + 1}.${stepIdx + 1} ${stepVal.title}`,
+    //       linkNumber: linkNumber.toString(),
+    //       status: stepVal.status.name,
+    //     };
+
+    //     summaryData.push(stepBase);
+    //     contentData.push({ ...stepBase, description: stepVal.description, image: stepVal.image });
+
+    //     if ((stepIdx + 1) % 2 === 0 && stepIdx !== sectionVal.step.length - 1) linkNumber++;
+    //   });
+    // });
+
+    // // Document Summary Pages
+    // await this.createDocumentSummary(
+    //   summaryData,
+    //   docSummStartPage,
+    //   docSummFirstPageLength,
+    //   docSummRestPageLength,
+    //   summaryStatus
+    // );
 
     const rPath = path.join(__dirname, "..", "report");
 
     const output = this.doc.output("arraybuffer");
 
-    fs.writeFile(path.join(rPath, "report.pdf"), Buffer.from(output) as any, (err) => {
+    fs.writeFile(path.join(rPath, "report-plain.pdf"), Buffer.from(output) as any, (err) => {
       if (err) {
         throw err;
       }
@@ -1406,27 +1425,98 @@ class ReportBuilder {
   }
 }
 
-const dummyData: SectionData[] = [];
+let dummyData: StepData[] = [];
 
-for (let i = 0; i < 10; i++) {
-  const step: StepData[] = [];
-
-  for (let j = 0; j < (i < 2 ? 20 : i < 4 ? 40 : i < 6 ? 60 : i < 8 ? 80 : 10); j++) {
-    step.push({
-      title: "Select Menu Transafer",
-      description:
-        // "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin cursus aliquet ligula, et tincidunt lectus. Quisque vel nulla mattis, pulvinar odio non, posuere diam. Phasellus fermentum nisl sed arcu vehicula scelerisque. Sed vulputate sodales mollis. Fusce condimentum est nibh, nec congue nulla dignissim ac. Curabitur a laoreet lorem. Maecenas tincidunt pharetra scelerisque. Mauris efficitur ligula eget feugiat interdum. Integer rutrum sem eros, eu porta felis sollicitudin sit amet. Nam sed dui finibus, tristique",
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin cursus aliquet ligula, et tincidunt lectus. Quisque vel nulla mattis, pulvinar odio non, posuere diam. Phasellus fermentum nisl sed arcu vehicula scelerisque. Sed vulputate sodales mollis.",
-      image: j % 2 == 0 ? path.join(__dirname, "..", "ss3.png") : path.join(__dirname, "..", "mobile.png"),
-      status: {
-        name: j < 3 ? "DONE" : j < 6 ? "PASSED" : "FAILED",
-      },
-    });
-  }
-
+for (let i = 1; i <= 115; i++) {
   dummyData.push({
-    section: "Create Transaction",
-    step: step,
+    title: `Click Submit ${i}`,
+    // description: `Expected : Memastikan Berhasil Click Submit ${i}\nActual : Berhasil Click Submit ${i}\nTransaction Id : 09827372716232`,
+    description:
+      i % 2 == 0
+        ? // "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannMEndapatkan\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
+          // "Expected : Memastikan Berhasil Click Submit\nActual : Berhasil Click Submit\nSelect Language En\nActual: Memastikan BErhasil Login\nSelect Language",
+          // "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
+          // "Loremipsumdolorsitamet,consecteturadipiscingelit.Seddoeiusmodtemporincididuntutlaboreetdoloremagnaaliqua.Utenimadminimveniam,quisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequat.Duisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariatur.Excepteursintoccaecatcupidatatnonproident,suntinculpaquiofficiadeseruntmollitanimidestlaborumsjhshhsbsndjaksdasdjns.",
+          // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
+          // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJthis.y F2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeBaabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzzAABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ11223344556677889900JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
+          //       `{
+          //   "id": "desc-001",
+          //   "type": "description",
+          //   "content": "aaajjkkkssddffqqqqaajjkkkssddffqqqqaajjkkkssddffqqqqaajjkkkssddffqqqqsssssjjjjjkkkkkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddddddddddddddddssssssllllllllkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqllllllllllllllllllllllllllllssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaannnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaassjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndnlllllllaaaaaajjjjjjjjjjjjjjkkkkkkkkkkkkkkkkkkkkkkkkkssssssssssssssssssddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxlllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+          // }`,
+          `{
+  "id": 12345,
+  "title": "Create Transaction",
+  "status": "DONE",
+  "steps": [
+    {
+      "step": 1,
+      "title": "Select Menu Transfer",
+      "description": "User opens the application, navigates to the transfer menu, and selects the appropriate transaction type.",
+      "success": true
+    },
+    {
+      "step": 2,
+      "title": "Fill Transaction Form",
+      "description": "User fills in the destination account, amount, and additional notes before continuing to the next step.",
+      "success": true
+    },
+    {
+      "step": 3,
+      "title": "Confirm Transaction",
+      "description": "System displays a confirmation screen and user verifies all entered data before submitting the transaction.",
+      "success": true
+    }
+  ],
+  "meta": {
+    "createdAt": "2025-03-14T10:30:00Z",
+    "createdBy": "system",
+    "version": "1.0.0"
+  }
+}`
+        : `<?xml version="1.0" encoding="UTF-8"?>
+    <transaction>
+      <id>12345</id>
+      <title>Create Transaction</title>
+      <status>DONE</status>
+      <steps>
+        <step>
+          <stepNumber>1</stepNumber>
+          <title>Select Menu Transfer</title>
+          <description>
+            User opens the application, navigates to the transfer menu,
+            and selects the appropriate transaction type.
+          </description>
+          <success>true</success>
+        </step>
+        <step>
+          <stepNumber>2</stepNumber>
+          <title>Fill Transaction Form</title>
+          <description>
+            User fills in the destination account, amount, and additional
+            notes before continuing to the next step.
+          </description>
+          <success>true</success>
+        </step>
+        <step>
+          <stepNumber>3</stepNumber>
+          <title>Confirm Transaction</title>
+          <description>
+            System displays a confirmation screen and user verifies all
+            entered data before submitting the transaction.
+          </description>
+          <success>true</success>
+        </step>
+      </steps>
+      <meta>
+        <createdAt>2025-03-14T10:30:00Z</createdAt>
+        <createdBy>system</createdBy>
+        <version>1.0.0</version>
+      </meta>
+    </transaction>`,
+    status: {
+      name: i < 30 ? "DONE" : i < 70 ? "PASSED" : "FAILED",
+    },
   });
 }
 

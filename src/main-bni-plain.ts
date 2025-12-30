@@ -12,6 +12,11 @@ type CoverData = {
   date: string;
 };
 
+type SectionData = {
+  section: string;
+  step: StepData[];
+};
+
 type StepData = {
   title: string;
   description: string;
@@ -1149,7 +1154,8 @@ class ReportBuilder {
     }
   }
 
-  private async createContent(stepsData: StepData[], startPage: number): Promise<SummaryData[]> {
+  private async createContent(sectionsData: SectionData[], startPage: number): Promise<SummaryData[]> {
+    const sectionFontSize = 12;
     const fontSize = 11;
     const titlePadding = 2;
     const descPadding = 6;
@@ -1193,7 +1199,7 @@ class ReportBuilder {
     const summaryData: SummaryData[] = [];
     let currentPage = startPage;
     let remainingSpace = this.pageHeight - this.y * 2;
-    let currentTitlePosition: number = this.y + this.yPadding + 4;
+    let currentTitlePosition: number = this.y + this.yPadding + 8;
     let currentDescriptionPosition: number = 0;
     let fitDescHeight: number = 0;
 
@@ -1201,12 +1207,12 @@ class ReportBuilder {
       let titleHeight: number = 0;
       let titleBlockHeight: number = 0;
 
-      // Get Section Height And Title
+      // Get Title Height
       this.doc.setFont("times", "bold");
       this.doc.setFontSize(fontSize);
       titleHeight = this.doc.getTextDimensions(title).h * 1.15;
       if (isFirstTitle) {
-        titleBlockHeight = this.yPadding + titlePadding + 4 + titleHeight + descPadding;
+        titleBlockHeight = this.yPadding + titlePadding + 8 + titleHeight + descPadding;
       } else {
         titleBlockHeight = titlePadding + titleHeight + descPadding;
       }
@@ -1214,77 +1220,177 @@ class ReportBuilder {
       return titleBlockHeight;
     };
 
-    const drawContent = async (stepData: StepData, titleNum: number, isFirstDraw: boolean) => {
-      let fitDesc: string = "";
-      let overflowDesc: string = "";
-      const title: string = `${titleNum}. ${stepData.title}`;
-      const titleBlockHeight = getTitleHeight(title, isFirstDraw);
+    const getSectionHeight = (section: string): number => {
+      let sectionHeight: number = 0;
+      let sectionBlockHeight: number = 0;
 
-      if (titleBlockHeight > remainingSpace) {
-        currentPage++;
-        remainingSpace = this.pageHeight - this.y * 2;
-        await this.addPage();
-        this.doc.setPage(currentPage);
-        currentTitlePosition = this.y + this.yPadding + 4;
-      } else {
-        if (isFirstDraw) {
-          currentTitlePosition += currentDescriptionPosition + fitDescHeight + titlePadding;
-        } else {
-          currentTitlePosition = currentDescriptionPosition + fitDescHeight + titlePadding;
-        }
-      }
-
-      // Set Title
+      // Get Section Height
       this.doc.setFont("times", "bold");
-      this.doc.setFontSize(fontSize);
-      if (stepData.status.name === "FAILED") {
-        this.doc.setTextColor(247, 59, 59);
-      } else {
-        this.doc.setTextColor(stepData.status.name === "DONE" ? "black" : "green");
-      }
-      this.doc.text(title, this.x + this.xPadding, currentTitlePosition);
+      this.doc.setFontSize(sectionFontSize);
+      sectionHeight = this.doc.getTextDimensions(section).h * 1.15;
+      sectionBlockHeight = this.yPadding + 3 + sectionHeight;
+
+      return sectionBlockHeight;
+    };
+
+    const drawContent = async (sectionData: SectionData, sectionNum: number) => {
+      const section: string = `${sectionNum}. ${sectionData.section}`;
+      const sectionBlockHeight: number = getSectionHeight(section);
+
+      // Set Section
+      this.doc.setFont("times", "bold");
+      this.doc.setFontSize(sectionFontSize);
+      const sectionWidth = this.doc.getTextWidth(section);
+      const sectionPosition = this.y + this.yPadding + 3;
+      this.doc.text(section, this.pageWidth / 2 - sectionWidth / 2, sectionPosition);
+      remainingSpace -= sectionBlockHeight;
       summaryData.push({
-        title: title,
+        title: section,
         linkNumber: currentPage.toString(),
-        status: stepData.status.name,
+        status: "-",
       });
 
-      // Set Description
-      this.doc.setFont("times", "normal");
-      this.doc.setTextColor("black");
-      this.doc.setFontSize(fontSize);
-      remainingSpace -= titleBlockHeight;
-      [fitDesc, fitDescHeight, overflowDesc] = splitDescription(stepData.description, remainingSpace);
-      currentDescriptionPosition = currentTitlePosition + descPadding;
-      this.doc.text(fitDesc, this.x + this.xPadding, currentDescriptionPosition);
-      remainingSpace -= fitDescHeight;
-      while (overflowDesc.length > 0) {
-        currentPage++;
-        remainingSpace = this.pageHeight - this.y * 2;
-        await this.addPage();
-        this.doc.setPage(currentPage);
+      let stepIndex = 0;
+      for (const stepData of sectionData.step) {
+        let fitDesc: string = "";
+        let overflowDesc: string = "";
+        const title: string = `${sectionNum}.${stepIndex + 1} ${stepData.title}`;
+        const titleBlockHeight = getTitleHeight(title, stepIndex == 0);
+
+        // Set Title
+        if (titleBlockHeight > remainingSpace) {
+          currentPage++;
+          remainingSpace = this.pageHeight - this.y * 2;
+          await this.addPage();
+          this.doc.setPage(currentPage);
+          currentTitlePosition = this.y + this.yPadding + 4;
+        } else {
+          if (stepIndex == 0) {
+            currentTitlePosition += currentDescriptionPosition + fitDescHeight + titlePadding;
+          } else {
+            currentTitlePosition = currentDescriptionPosition + fitDescHeight + titlePadding;
+          }
+        }
+        this.doc.setFont("times", "bold");
+        this.doc.setFontSize(fontSize);
+        if (stepData.status.name === "FAILED") {
+          this.doc.setTextColor(247, 59, 59);
+        } else {
+          this.doc.setTextColor(stepData.status.name === "DONE" ? "black" : "green");
+        }
+        this.doc.text(title, this.x + this.xPadding, currentTitlePosition);
+        remainingSpace -= titleBlockHeight;
+        summaryData.push({
+          title: title,
+          linkNumber: currentPage.toString(),
+          status: stepData.status.name,
+        });
+
+        // Set Description
         this.doc.setFont("times", "normal");
         this.doc.setTextColor("black");
         this.doc.setFontSize(fontSize);
-        remainingSpace -= titleBlockHeight;
-        [fitDesc, fitDescHeight, overflowDesc] = splitDescription(overflowDesc, remainingSpace);
-        currentDescriptionPosition = this.y + this.yPadding + 4;
+        [fitDesc, fitDescHeight, overflowDesc] = splitDescription(stepData.description, remainingSpace);
+        currentDescriptionPosition = currentTitlePosition + descPadding;
         this.doc.text(fitDesc, this.x + this.xPadding, currentDescriptionPosition);
         remainingSpace -= fitDescHeight;
+        while (overflowDesc.length > 0) {
+          currentPage++;
+          remainingSpace = this.pageHeight - this.y * 2;
+          await this.addPage();
+          this.doc.setPage(currentPage);
+          this.doc.setFont("times", "normal");
+          this.doc.setTextColor("black");
+          this.doc.setFontSize(fontSize);
+          remainingSpace -= titleBlockHeight;
+          [fitDesc, fitDescHeight, overflowDesc] = splitDescription(overflowDesc, remainingSpace);
+          currentDescriptionPosition = this.y + this.yPadding + 4;
+          this.doc.text(fitDesc, this.x + this.xPadding, currentDescriptionPosition);
+          remainingSpace -= fitDescHeight;
+        }
+
+        stepIndex++;
       }
+
+      // let fitDesc: string = "";
+      // let overflowDesc: string = "";
+      // const title: string = `${titleNum}. ${stepData.title}`;
+      // const titleBlockHeight = getTitleHeight(title, isFirstDraw);
+      // if (titleBlockHeight > remainingSpace) {
+      //   currentPage++;
+      //   remainingSpace = this.pageHeight - this.y * 2;
+      //   await this.addPage();
+      //   this.doc.setPage(currentPage);
+      //   currentTitlePosition = this.y + this.yPadding + 4;
+      // } else {
+      //   if (isFirstDraw) {
+      //     currentTitlePosition += currentDescriptionPosition + fitDescHeight + titlePadding;
+      //   } else {
+      //     currentTitlePosition = currentDescriptionPosition + fitDescHeight + titlePadding;
+      //   }
+      // }
+      // // Set Title
+      // this.doc.setFont("times", "bold");
+      // this.doc.setFontSize(fontSize);
+      // if (stepData.status.name === "FAILED") {
+      //   this.doc.setTextColor(247, 59, 59);
+      // } else {
+      //   this.doc.setTextColor(stepData.status.name === "DONE" ? "black" : "green");
+      // }
+      // // currentTitlePosition += currentDescriptionPosition + fitDescHeight + titlePadding;
+      // this.doc.text(title, this.x + this.xPadding, currentTitlePosition);
+      // summaryData.push({
+      //   title: title,
+      //   linkNumber: currentPage.toString(),
+      //   status: stepData.status.name,
+      // });
+      // // Set Description
+      // this.doc.setFont("times", "normal");
+      // this.doc.setTextColor("black");
+      // this.doc.setFontSize(fontSize);
+      // remainingSpace -= titleBlockHeight;
+      // [fitDesc, fitDescHeight, overflowDesc] = splitDescription(stepData.description, remainingSpace);
+      // currentDescriptionPosition = currentTitlePosition + descPadding;
+      // this.doc.text(fitDesc, this.x + this.xPadding, currentDescriptionPosition);
+      // remainingSpace -= fitDescHeight;
+      // while (overflowDesc.length > 0) {
+      //   currentPage++;
+      //   remainingSpace = this.pageHeight - this.y * 2;
+      //   await this.addPage();
+      //   this.doc.setPage(currentPage);
+      //   this.doc.setFont("times", "normal");
+      //   this.doc.setTextColor("black");
+      //   this.doc.setFontSize(fontSize);
+      //   remainingSpace -= titleBlockHeight;
+      //   [fitDesc, fitDescHeight, overflowDesc] = splitDescription(overflowDesc, remainingSpace);
+      //   currentDescriptionPosition = this.y + this.yPadding + 4;
+      //   this.doc.text(fitDesc, this.x + this.xPadding, currentDescriptionPosition);
+      //   remainingSpace -= fitDescHeight;
+      // }
     };
 
     await this.addPage();
     this.doc.setPage(currentPage);
 
+    // let stepIndex = 0;
+    // for (const sectionData of sectionsData) {
+    //   if (stepIndex === 0) {
+    //     await drawContent(sectionData, stepIndex + 1, true);
+    //   } else {
+    //     await drawContent(sectionData, stepIndex + 1, false);
+    //   }
+    //   stepIndex++;
+    // }
+
     let stepIndex = 0;
-    for (const stepData of stepsData) {
-      if (stepIndex === 0) {
-        await drawContent(stepData, stepIndex + 1, true);
-      } else {
-        await drawContent(stepData, stepIndex + 1, false);
-      }
+    for (const sectionData of sectionsData) {
+      await this.addPage();
+      this.doc.setPage(currentPage);
+      await drawContent(sectionData, stepIndex + 1);
       stepIndex++;
+      currentPage++;
+      remainingSpace = this.pageHeight - this.y * 2;
+      currentTitlePosition = this.y + this.yPadding + 8;
     }
 
     return summaryData;
@@ -1304,7 +1410,7 @@ class ReportBuilder {
     return [newText, lineHeight];
   }
 
-  public async createReport(stepsData: StepData[]) {
+  public async createReport(sectionsData: SectionData[]) {
     moment.locale("id");
     const coverData: CoverData = {
       projectName: "BNI API Gateway",
@@ -1314,7 +1420,9 @@ class ReportBuilder {
       date: moment().format("DD-MM-YYYY_HH:mm:ss"),
     };
     // Content Page
-    const stepDataTotalLength = stepsData.length;
+    const stepDataTotalLength = sectionsData.reduce((acc, cur) => acc + cur.step.length, 0);
+
+    const sectionTotalLength = sectionsData.length;
     // Harcoded Page
     const coverTotalPage = 1;
     const beritaAcaraTotalPage = 4;
@@ -1322,12 +1430,15 @@ class ReportBuilder {
     const tocStartPage = 6;
     const tocFirstPageLength = 46;
     const tocRestPageLength = 51;
-    const tocTotalPage = Math.ceil(Math.max(0, stepDataTotalLength - tocFirstPageLength) / tocRestPageLength) + 1;
+    const tocTotalPage =
+      Math.ceil(Math.max(0, stepDataTotalLength + sectionTotalLength - tocFirstPageLength) / tocRestPageLength) + 1;
     const docSummStartPage = coverTotalPage + beritaAcaraTotalPage + tocTotalPage + 1;
     const docSummFirstPageLength = 34;
     const docSummRestPageLength = 40;
     const docSummTotalPage =
-      Math.ceil(Math.max(0, stepDataTotalLength - docSummFirstPageLength) / docSummRestPageLength) + 1;
+      Math.ceil(
+        Math.max(0, stepDataTotalLength + sectionTotalLength - docSummFirstPageLength) / docSummRestPageLength
+      ) + 1;
     // Total Page
     const totalPage = beritaAcaraTotalPage + tocTotalPage + docSummTotalPage;
     const startContentNum = coverTotalPage + beritaAcaraTotalPage + tocTotalPage + docSummTotalPage + 1;
@@ -1344,7 +1455,7 @@ class ReportBuilder {
     await this.createBeritaAcaraPage4(5);
 
     // Content
-    const summaryData = await this.createContent(stepsData, startContentNum);
+    const summaryData = await this.createContent(sectionsData, startContentNum);
 
     // Table of Content
     await this.createTableOfContent(summaryData, tocStartPage, docSummStartPage, tocFirstPageLength, tocRestPageLength);
@@ -1448,98 +1559,26 @@ class ReportBuilder {
   }
 }
 
-let dummyData: StepData[] = [];
+const dummyData: SectionData[] = [];
 
-for (let i = 1; i <= 30; i++) {
+for (let i = 0; i < 10; i++) {
+  const step: StepData[] = [];
+
+  for (let j = 0; j < (i < 2 ? 20 : i < 4 ? 40 : i < 6 ? 60 : i < 8 ? 80 : 10); j++) {
+    step.push({
+      title: "Select Menu Transafer",
+      description:
+        // "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin cursus aliquet ligula, et tincidunt lectus. Quisque vel nulla mattis, pulvinar odio non, posuere diam. Phasellus fermentum nisl sed arcu vehicula scelerisque. Sed vulputate sodales mollis. Fusce condimentum est nibh, nec congue nulla dignissim ac. Curabitur a laoreet lorem. Maecenas tincidunt pharetra scelerisque. Mauris efficitur ligula eget feugiat interdum. Integer rutrum sem eros, eu porta felis sollicitudin sit amet. Nam sed dui finibus, tristique",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin cursus aliquet ligula, et tincidunt lectus. Quisque vel nulla mattis, pulvinar odio non, posuere diam. Phasellus fermentum nisl sed arcu vehicula scelerisque. Sed vulputate sodales mollis.",
+      status: {
+        name: j < 3 ? "DONE" : j < 6 ? "PASSED" : "FAILED",
+      },
+    });
+  }
+
   dummyData.push({
-    title: `Click Submit ${i}`,
-    // description: `Expected : Memastikan Berhasil Click Submit ${i}\nActual : Berhasil Click Submit ${i}\nTransaction Id : 09827372716232`,
-    description:
-      i % 2 == 0
-        ? "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannMEndapatkan\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann"
-        : "Expected : Memastikan Berhasil Click Submit\nActual : Berhasil Click Submit\nSelect Language En\nActual: Memastikan BErhasil Login\nSelect Language",
-    // "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
-    // "Loremipsumdolorsitamet,consecteturadipiscingelit.Seddoeiusmodtemporincididuntutlaboreetdoloremagnaaliqua.Utenimadminimveniam,quisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequat.Duisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariatur.Excepteursintoccaecatcupidatatnonproident,suntinculpaquiofficiadeseruntmollitanimidestlaborumsjhshhsbsndjaksdasdjns.",
-    // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
-    // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJthis.y F2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeBaabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzzAABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ11223344556677889900JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
-    //       `{
-    //   "id": "desc-001",
-    //   "type": "description",
-    //   "content": "aaajjkkkssddffqqqqaajjkkkssddffqqqqaajjkkkssddffqqqqaajjkkkssddffqqqqsssssjjjjjkkkkkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddddddddddddddddssssssllllllllkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqllllllllllllllllllllllllllllssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaannnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaassjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndnlllllllaaaaaajjjjjjjjjjjjjjkkkkkkkkkkkkkkkkkkkkkkkkkssssssssssssssssssddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxlllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
-    // }`,
-    //          `{
-    //   "id": 12345,
-    //   "title": "Create Transaction",
-    //   "status": "DONE",
-    //   "steps": [
-    //     {
-    //       "step": 1,
-    //       "title": "Select Menu Transfer",
-    //       "description": "User opens the application, navigates to the transfer menu, and selects the appropriate transaction type.",
-    //       "success": true
-    //     },
-    //     {
-    //       "step": 2,
-    //       "title": "Fill Transaction Form",
-    //       "description": "User fills in the destination account, amount, and additional notes before continuing to the next step.",
-    //       "success": true
-    //     },
-    //     {
-    //       "step": 3,
-    //       "title": "Confirm Transaction",
-    //       "description": "System displays a confirmation screen and user verifies all entered data before submitting the transaction.",
-    //       "success": true
-    //     }
-    //   ],
-    //   "meta": {
-    //     "createdAt": "2025-03-14T10:30:00Z",
-    //     "createdBy": "system",
-    //     "version": "1.0.0"
-    //   }
-    // }`
-    //         : `<?xml version="1.0" encoding="UTF-8"?>
-    //     <transaction>
-    //       <id>12345</id>
-    //       <title>Create Transaction</title>
-    //       <status>DONE</status>
-    //       <steps>
-    //         <step>
-    //           <stepNumber>1</stepNumber>
-    //           <title>Select Menu Transfer</title>
-    //           <description>
-    //             User opens the application, navigates to the transfer menu,
-    //             and selects the appropriate transaction type.
-    //           </description>
-    //           <success>true</success>
-    //         </step>
-    //         <step>
-    //           <stepNumber>2</stepNumber>
-    //           <title>Fill Transaction Form</title>
-    //           <description>
-    //             User fills in the destination account, amount, and additional
-    //             notes before continuing to the next step.
-    //           </description>
-    //           <success>true</success>
-    //         </step>
-    //         <step>
-    //           <stepNumber>3</stepNumber>
-    //           <title>Confirm Transaction</title>
-    //           <description>
-    //             System displays a confirmation screen and user verifies all
-    //             entered data before submitting the transaction.
-    //           </description>
-    //           <success>true</success>
-    //         </step>
-    //       </steps>
-    //       <meta>
-    //         <createdAt>2025-03-14T10:30:00Z</createdAt>
-    //         <createdBy>system</createdBy>
-    //         <version>1.0.0</version>
-    //       </meta>
-    //     </transaction>`,
-    status: {
-      name: i < 30 ? "DONE" : i < 70 ? "PASSED" : "FAILED",
-    },
+    section: "Create Transaction",
+    step: step,
   });
 }
 

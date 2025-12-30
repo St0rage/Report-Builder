@@ -172,9 +172,8 @@ class ReportBuilder {
       "FAST"
     );
 
-    this.doc.setFontSize(textFontSize);
-
     // Set Header Right Text
+    this.doc.setFontSize(textFontSize);
     this.doc.setFont("times", "bold");
     const headerRightTextWidth = this.doc.getTextWidth(title);
     this.doc.text(

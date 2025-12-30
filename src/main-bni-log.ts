@@ -58,15 +58,15 @@ class ReportBuilder {
     this.page = 2;
   }
 
-  private async addPage(totalPage: number) {
+  private async addPage() {
     const textFontSize = 10;
     const headerPosition = 8;
     const headerImagewidth = 24;
     const headerImageHeight = 7;
     const headerRightText = "Automation Test Execution Document";
-    const footerPosition = 8;
-    const footerLeftText = `Copyright © (${moment().year()}) by BNI-APS. Testing Strategy Execution Form`;
-    const footerRightText = `Page ${this.page} of ${totalPage}`;
+    // const footerPosition = 8;
+    // const footerLeftText = `Copyright © (${moment().year()}) by BNI-APS. Testing Strategy Execution Form`;
+    // const footerRightText = `Page ${this.page} of ${totalPage}`;
 
     // Add Page
     this.doc.addPage();
@@ -105,9 +105,32 @@ class ReportBuilder {
       headerPosition + 1.2 + headerImageHeight / 2
     );
 
+    // // Create Footer Information
+    // this.doc.setFont("times", "italic");
+    // // this.doc.setFontSize(textFontSize);
+    // const footerTextPosition: number = this.pageHeight - this.y + footerPosition;
+
+    // Set Footer Left Text
+    // this.doc.text(footerLeftText, this.x + this.xPadding, footerTextPosition);
+
+    // // Set Footer Right Text
+    // const footerRightTextWidth: number = this.doc.getTextWidth(footerRightText);
+    // this.doc.text(footerRightText, this.pageWidth - this.x - this.xPadding - footerRightTextWidth, footerTextPosition);
+
+    this.page += 1;
+  }
+
+  private async updateFooter(currentPage: number) {
+    const textFontSize = 10;
+    const footerPosition = 8;
+    const footerLeftText = `Copyright © (${moment().year()}) by BNI-APS. Testing Strategy Execution Form`;
+    const footerRightText = `Page ${currentPage} of ${this.page - 1}`;
+
+    this.doc.setPage(currentPage);
+
     // Create Footer Information
     this.doc.setFont("times", "italic");
-    // this.doc.setFontSize(textFontSize);
+    this.doc.setFontSize(textFontSize);
     const footerTextPosition: number = this.pageHeight - this.y + footerPosition;
 
     // Set Footer Left Text
@@ -116,8 +139,6 @@ class ReportBuilder {
     // Set Footer Right Text
     const footerRightTextWidth: number = this.doc.getTextWidth(footerRightText);
     this.doc.text(footerRightText, this.pageWidth - this.x - this.xPadding - footerRightTextWidth, footerTextPosition);
-
-    this.page += 1;
   }
 
   private async createCover(coverData: CoverData) {
@@ -160,9 +181,8 @@ class ReportBuilder {
       "FAST"
     );
 
-    this.doc.setFontSize(textFontSize);
-
     // Set Header Right Text
+    this.doc.setFontSize(textFontSize);
     this.doc.setFont("times", "bold");
     const headerRightTextWidth = this.doc.getTextWidth(title);
     this.doc.text(
@@ -1203,7 +1223,7 @@ class ReportBuilder {
       if (titleBlockHeight > remainingSpace) {
         currentPage++;
         remainingSpace = this.pageHeight - this.y * 2;
-        await this.addPage(currentPage);
+        await this.addPage();
         this.doc.setPage(currentPage);
         currentTitlePosition = this.y + this.yPadding + 4;
       } else {
@@ -1242,7 +1262,7 @@ class ReportBuilder {
       while (overflowDesc.length > 0) {
         currentPage++;
         remainingSpace = this.pageHeight - this.y * 2;
-        await this.addPage(currentPage);
+        await this.addPage();
         this.doc.setPage(currentPage);
         this.doc.setFont("times", "normal");
         this.doc.setTextColor("black");
@@ -1255,7 +1275,7 @@ class ReportBuilder {
       }
     };
 
-    await this.addPage(currentPage);
+    await this.addPage();
     this.doc.setPage(currentPage);
 
     let stepIndex = 0;
@@ -1316,7 +1336,7 @@ class ReportBuilder {
     await this.createCover(coverData);
 
     for (let i = 0; i < totalPage; i++) {
-      await this.addPage(totalPage + coverTotalPage);
+      await this.addPage();
     }
 
     await this.createBeritaAcaraPage1(2);
@@ -1360,6 +1380,10 @@ class ReportBuilder {
       docSummRestPageLength,
       summaryStatus
     );
+
+    for (let i = 2; i < this.page; i++) {
+      await this.updateFooter(i);
+    }
 
     // // Create Summary and ContentData
     // const summaryData: SummaryData[] = [];
@@ -1427,93 +1451,93 @@ class ReportBuilder {
 
 let dummyData: StepData[] = [];
 
-for (let i = 1; i <= 115; i++) {
+for (let i = 1; i <= 30; i++) {
   dummyData.push({
     title: `Click Submit ${i}`,
     // description: `Expected : Memastikan Berhasil Click Submit ${i}\nActual : Berhasil Click Submit ${i}\nTransaction Id : 09827372716232`,
     description:
       i % 2 == 0
-        ? // "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannMEndapatkan\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
-          // "Expected : Memastikan Berhasil Click Submit\nActual : Berhasil Click Submit\nSelect Language En\nActual: Memastikan BErhasil Login\nSelect Language",
-          // "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
-          // "Loremipsumdolorsitamet,consecteturadipiscingelit.Seddoeiusmodtemporincididuntutlaboreetdoloremagnaaliqua.Utenimadminimveniam,quisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequat.Duisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariatur.Excepteursintoccaecatcupidatatnonproident,suntinculpaquiofficiadeseruntmollitanimidestlaborumsjhshhsbsndjaksdasdjns.",
-          // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
-          // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJthis.y F2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeBaabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzzAABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ11223344556677889900JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
-          //       `{
-          //   "id": "desc-001",
-          //   "type": "description",
-          //   "content": "aaajjkkkssddffqqqqaajjkkkssddffqqqqaajjkkkssddffqqqqaajjkkkssddffqqqqsssssjjjjjkkkkkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddddddddddddddddssssssllllllllkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqllllllllllllllllllllllllllllssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaannnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaassjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndnlllllllaaaaaajjjjjjjjjjjjjjkkkkkkkkkkkkkkkkkkkkkkkkkssssssssssssssssssddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxlllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
-          // }`,
-          `{
-  "id": 12345,
-  "title": "Create Transaction",
-  "status": "DONE",
-  "steps": [
-    {
-      "step": 1,
-      "title": "Select Menu Transfer",
-      "description": "User opens the application, navigates to the transfer menu, and selects the appropriate transaction type.",
-      "success": true
-    },
-    {
-      "step": 2,
-      "title": "Fill Transaction Form",
-      "description": "User fills in the destination account, amount, and additional notes before continuing to the next step.",
-      "success": true
-    },
-    {
-      "step": 3,
-      "title": "Confirm Transaction",
-      "description": "System displays a confirmation screen and user verifies all entered data before submitting the transaction.",
-      "success": true
-    }
-  ],
-  "meta": {
-    "createdAt": "2025-03-14T10:30:00Z",
-    "createdBy": "system",
-    "version": "1.0.0"
-  }
-}`
-        : `<?xml version="1.0" encoding="UTF-8"?>
-    <transaction>
-      <id>12345</id>
-      <title>Create Transaction</title>
-      <status>DONE</status>
-      <steps>
-        <step>
-          <stepNumber>1</stepNumber>
-          <title>Select Menu Transfer</title>
-          <description>
-            User opens the application, navigates to the transfer menu,
-            and selects the appropriate transaction type.
-          </description>
-          <success>true</success>
-        </step>
-        <step>
-          <stepNumber>2</stepNumber>
-          <title>Fill Transaction Form</title>
-          <description>
-            User fills in the destination account, amount, and additional
-            notes before continuing to the next step.
-          </description>
-          <success>true</success>
-        </step>
-        <step>
-          <stepNumber>3</stepNumber>
-          <title>Confirm Transaction</title>
-          <description>
-            System displays a confirmation screen and user verifies all
-            entered data before submitting the transaction.
-          </description>
-          <success>true</success>
-        </step>
-      </steps>
-      <meta>
-        <createdAt>2025-03-14T10:30:00Z</createdAt>
-        <createdBy>system</createdBy>
-        <version>1.0.0</version>
-      </meta>
-    </transaction>`,
+        ? "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannMEndapatkan\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann\nBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann"
+        : "Expected : Memastikan Berhasil Click Submit\nActual : Berhasil Click Submit\nSelect Language En\nActual: Memastikan BErhasil Login\nSelect Language",
+    // "Berhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail MendapatkannBerhasil Mendapatkan Transaction Id, Berhasil Mendapatkan Transaction Id, Berhail Mendapatkann",
+    // "Loremipsumdolorsitamet,consecteturadipiscingelit.Seddoeiusmodtemporincididuntutlaboreetdoloremagnaaliqua.Utenimadminimveniam,quisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequat.Duisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariatur.Excepteursintoccaecatcupidatatnonproident,suntinculpaquiofficiadeseruntmollitanimidestlaborumsjhshhsbsndjaksdasdjns.",
+    // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
+    // "JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJthis.y F2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeBaabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzzAABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ11223344556677889900JqHYB8LmwTDzFuRsc6PMb5J9tv3OhCXgVjopInMdufZ7yWBKxP0k2EzAShNlaeqvwYtGr1DmoiCpRXLs0bfj5M7QKgnWLeTyZxU2N8VhJ6O9pFz3rcRqSaXkYcIVu4wBEbHnPJF2K7vtCs0ZjylOoApW1XedgMTiUB5GhkN4QsRmLrx1qjVP3vfc6p9MUzD0IsZoWt8Egb7dYSFLaiwnHrxjzKTVQPlqA92JeB",
+    //       `{
+    //   "id": "desc-001",
+    //   "type": "description",
+    //   "content": "aaajjkkkssddffqqqqaajjkkkssddffqqqqaajjkkkssddffqqqqaajjkkkssddffqqqqsssssjjjjjkkkkkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddddddddddddddddssssssllllllllkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqllllllllllllllllllllllllllllssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaannnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaassjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndndnlllllllaaaaaajjjjjjjjjjjjjjkkkkkkkkkkkkkkkkkkkkkkkkkssssssssssssssssssddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssskkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxlllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+    // }`,
+    //          `{
+    //   "id": 12345,
+    //   "title": "Create Transaction",
+    //   "status": "DONE",
+    //   "steps": [
+    //     {
+    //       "step": 1,
+    //       "title": "Select Menu Transfer",
+    //       "description": "User opens the application, navigates to the transfer menu, and selects the appropriate transaction type.",
+    //       "success": true
+    //     },
+    //     {
+    //       "step": 2,
+    //       "title": "Fill Transaction Form",
+    //       "description": "User fills in the destination account, amount, and additional notes before continuing to the next step.",
+    //       "success": true
+    //     },
+    //     {
+    //       "step": 3,
+    //       "title": "Confirm Transaction",
+    //       "description": "System displays a confirmation screen and user verifies all entered data before submitting the transaction.",
+    //       "success": true
+    //     }
+    //   ],
+    //   "meta": {
+    //     "createdAt": "2025-03-14T10:30:00Z",
+    //     "createdBy": "system",
+    //     "version": "1.0.0"
+    //   }
+    // }`
+    //         : `<?xml version="1.0" encoding="UTF-8"?>
+    //     <transaction>
+    //       <id>12345</id>
+    //       <title>Create Transaction</title>
+    //       <status>DONE</status>
+    //       <steps>
+    //         <step>
+    //           <stepNumber>1</stepNumber>
+    //           <title>Select Menu Transfer</title>
+    //           <description>
+    //             User opens the application, navigates to the transfer menu,
+    //             and selects the appropriate transaction type.
+    //           </description>
+    //           <success>true</success>
+    //         </step>
+    //         <step>
+    //           <stepNumber>2</stepNumber>
+    //           <title>Fill Transaction Form</title>
+    //           <description>
+    //             User fills in the destination account, amount, and additional
+    //             notes before continuing to the next step.
+    //           </description>
+    //           <success>true</success>
+    //         </step>
+    //         <step>
+    //           <stepNumber>3</stepNumber>
+    //           <title>Confirm Transaction</title>
+    //           <description>
+    //             System displays a confirmation screen and user verifies all
+    //             entered data before submitting the transaction.
+    //           </description>
+    //           <success>true</success>
+    //         </step>
+    //       </steps>
+    //       <meta>
+    //         <createdAt>2025-03-14T10:30:00Z</createdAt>
+    //         <createdBy>system</createdBy>
+    //         <version>1.0.0</version>
+    //       </meta>
+    //     </transaction>`,
     status: {
       name: i < 30 ? "DONE" : i < 70 ? "PASSED" : "FAILED",
     },

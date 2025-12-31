@@ -930,13 +930,13 @@ class ReportBuilder {
     summaryData.forEach((val, idx) => {
       if (currentDataIndex === currentPageLength) setNewPage();
 
-      this.doc.setFont("times", "normal");
-      tempContent = convertContentToDotted(val.title, val.linkNumber);
-      // if (val.status === "-") {
-      // } else {
-      //   this.doc.setFont("times", "normal");
-      //   tempContent = convertContentToDotted(`   ${val.title}`, val.linkNumber);
-      // }
+      if (val.status === "-") {
+        this.doc.setFont("times", "bold");
+        tempContent = convertContentToDotted(val.title, val.linkNumber);
+      } else {
+        this.doc.setFont("times", "normal");
+        tempContent = convertContentToDotted(`   ${val.title}`, val.linkNumber);
+      }
 
       currentContentPadding += fontSize / 2.3;
       this.doc.textWithLink(tempContent, this.x + this.xPadding, currentContentPadding, {
@@ -1311,66 +1311,10 @@ class ReportBuilder {
 
         stepIndex++;
       }
-
-      // let fitDesc: string = "";
-      // let overflowDesc: string = "";
-      // const title: string = `${titleNum}. ${stepData.title}`;
-      // const titleBlockHeight = getTitleHeight(title, isFirstDraw);
-      // if (titleBlockHeight > remainingSpace) {
-      //   currentPage++;
-      //   remainingSpace = this.pageHeight - this.y * 2;
-      //   await this.addPage();
-      //   this.doc.setPage(currentPage);
-      //   currentTitlePosition = this.y + this.yPadding + 4;
-      // } else {
-      //   if (isFirstDraw) {
-      //     currentTitlePosition += currentDescriptionPosition + fitDescHeight + titlePadding;
-      //   } else {
-      //     currentTitlePosition = currentDescriptionPosition + fitDescHeight + titlePadding;
-      //   }
-      // }
-      // // Set Title
-      // this.doc.setFont("times", "bold");
-      // this.doc.setFontSize(fontSize);
-      // if (stepData.status.name === "FAILED") {
-      //   this.doc.setTextColor(247, 59, 59);
-      // } else {
-      //   this.doc.setTextColor(stepData.status.name === "DONE" ? "black" : "green");
-      // }
-      // // currentTitlePosition += currentDescriptionPosition + fitDescHeight + titlePadding;
-      // this.doc.text(title, this.x + this.xPadding, currentTitlePosition);
-      // summaryData.push({
-      //   title: title,
-      //   linkNumber: currentPage.toString(),
-      //   status: stepData.status.name,
-      // });
-      // // Set Description
-      // this.doc.setFont("times", "normal");
-      // this.doc.setTextColor("black");
-      // this.doc.setFontSize(fontSize);
-      // remainingSpace -= titleBlockHeight;
-      // [fitDesc, fitDescHeight, overflowDesc] = splitDescription(stepData.description, remainingSpace);
-      // currentDescriptionPosition = currentTitlePosition + descPadding;
-      // this.doc.text(fitDesc, this.x + this.xPadding, currentDescriptionPosition);
-      // remainingSpace -= fitDescHeight;
-      // while (overflowDesc.length > 0) {
-      //   currentPage++;
-      //   remainingSpace = this.pageHeight - this.y * 2;
-      //   await this.addPage();
-      //   this.doc.setPage(currentPage);
-      //   this.doc.setFont("times", "normal");
-      //   this.doc.setTextColor("black");
-      //   this.doc.setFontSize(fontSize);
-      //   remainingSpace -= titleBlockHeight;
-      //   [fitDesc, fitDescHeight, overflowDesc] = splitDescription(overflowDesc, remainingSpace);
-      //   currentDescriptionPosition = this.y + this.yPadding + 4;
-      //   this.doc.text(fitDesc, this.x + this.xPadding, currentDescriptionPosition);
-      //   remainingSpace -= fitDescHeight;
-      // }
     };
 
-    await this.addPage();
-    this.doc.setPage(currentPage);
+    // await this.addPage();
+    // this.doc.setPage(currentPage);
 
     // let stepIndex = 0;
     // for (const sectionData of sectionsData) {
@@ -1391,6 +1335,8 @@ class ReportBuilder {
       currentPage++;
       remainingSpace = this.pageHeight - this.y * 2;
       currentTitlePosition = this.y + this.yPadding + 8;
+      currentDescriptionPosition = 0;
+      fitDescHeight = 0;
     }
 
     return summaryData;
@@ -1568,8 +1514,77 @@ for (let i = 0; i < 10; i++) {
     step.push({
       title: "Select Menu Transafer",
       description:
-        // "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin cursus aliquet ligula, et tincidunt lectus. Quisque vel nulla mattis, pulvinar odio non, posuere diam. Phasellus fermentum nisl sed arcu vehicula scelerisque. Sed vulputate sodales mollis. Fusce condimentum est nibh, nec congue nulla dignissim ac. Curabitur a laoreet lorem. Maecenas tincidunt pharetra scelerisque. Mauris efficitur ligula eget feugiat interdum. Integer rutrum sem eros, eu porta felis sollicitudin sit amet. Nam sed dui finibus, tristique",
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin cursus aliquet ligula, et tincidunt lectus. Quisque vel nulla mattis, pulvinar odio non, posuere diam. Phasellus fermentum nisl sed arcu vehicula scelerisque. Sed vulputate sodales mollis.",
+        i % 2 == 0
+          ? `{
+      "id": 12345,
+      "title": "Create Transaction",
+      "status": "DONE",
+      "steps": [
+        {
+          "step": 1,
+          "title": "Select Menu Transfer",
+          "description": "User opens the application, navigates to the transfer menu, and selects the appropriate transaction type.",
+          "success": true
+        },
+        {
+          "step": 2,
+          "title": "Fill Transaction Form",
+          "description": "User fills in the destination account, amount, and additional notes before continuing to the next step.",
+          "success": true
+        },
+        {
+          "step": 3,
+          "title": "Confirm Transaction",
+          "description": "System displays a confirmation screen and user verifies all entered data before submitting the transaction.",
+          "success": true
+        }
+      ],
+      "meta": {
+        "createdAt": "2025-03-14T10:30:00Z",
+        "createdBy": "system",
+        "version": "1.0.0"
+      }
+    }`
+          : `<?xml version="1.0" encoding="UTF-8"?>
+        <transaction>
+          <id>12345</id>
+          <title>Create Transaction</title>
+          <status>DONE</status>
+          <steps>
+            <step>
+              <stepNumber>1</stepNumber>
+              <title>Select Menu Transfer</title>
+              <description>
+                User opens the application, navigates to the transfer menu,
+                and selects the appropriate transaction type.
+              </description>
+              <success>true</success>
+            </step>
+            <step>
+              <stepNumber>2</stepNumber>
+              <title>Fill Transaction Form</title>
+              <description>
+                User fills in the destination account, amount, and additional
+                notes before continuing to the next step.
+              </description>
+              <success>true</success>
+            </step>
+            <step>
+              <stepNumber>3</stepNumber>
+              <title>Confirm Transaction</title>
+              <description>
+                System displays a confirmation screen and user verifies all
+                entered data before submitting the transaction.
+              </description>
+              <success>true</success>
+            </step>
+          </steps>
+          <meta>
+            <createdAt>2025-03-14T10:30:00Z</createdAt>
+            <createdBy>system</createdBy>
+            <version>1.0.0</version>
+          </meta>
+        </transaction>`,
       status: {
         name: j < 3 ? "DONE" : j < 6 ? "PASSED" : "FAILED",
       },
